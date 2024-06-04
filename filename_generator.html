@@ -1,0 +1,244 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Invoice Filename Generator</title>
+    <link rel="stylesheet" type="text/css" href="https://cdn.jsdelivr.net/npm/daterangepicker/daterangepicker.css" />
+    <script src="https://accounts.google.com/gsi/client" async defer></script>
+    <script src="https://apis.google.com/js/api.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/jquery@3.6.0/dist/jquery.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/moment@2.29.1/min/moment.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/daterangepicker/daterangepicker.min.js"></script>
+    <script>
+        let tokenClient;
+        let gapiInited = false;
+        let gisInited = false;
+        const calendarId = 'd9cb698b39b472c6e2fff33371c0193592456c77e7b4f7d32fd823c2460c77c0@group.calendar.google.com'; // Replace with your actual Calendar ID
+
+        function gapiLoaded() {
+            console.log("GAPI loaded");
+            gapi.load('client', initializeGapiClient);
+        }
+
+        async function initializeGapiClient() {
+            try {
+                await gapi.client.init({
+                    apiKey: 'AIzaSyBnyXIwJQ6v37a6hJdyBwreG8KHgWRtBjE',
+                    discoveryDocs: ["https://www.googleapis.com/discovery/v1/apis/calendar/v3/rest"],
+                });
+                gapiInited = true;
+                console.log("GAPI client initialized");
+                maybeEnableButtons();
+            } catch (error) {
+                console.error("Error initializing GAPI client:", error);
+            }
+        }
+
+        function gisLoaded() {
+            console.log("GIS loaded");
+            tokenClient = google.accounts.oauth2.initTokenClient({
+                client_id: '917046122705-82881lq22cmdo67r46tqvbc5v1f8j7aa.apps.googleusercontent.com',
+                scope: 'https://www.googleapis.com/auth/calendar.readonly',
+                callback: handleCredentialResponse,
+            });
+            gisInited = true;
+            console.log("Token client initialized");
+            maybeEnableButtons();
+        }
+
+        function maybeEnableButtons() {
+            if (gapiInited && gisInited) {
+                document.getElementById('authorize_button').style.visibility = 'visible';
+                console.log("Buttons enabled");
+            }
+        }
+
+        function handleAuthClick() {
+            console.log("Auth button clicked");
+            tokenClient.callback = async (resp) => {
+                if (resp.error) {
+                    console.error("Error in token client callback:", resp);
+                    return;
+                }
+                await listUpcomingEvents();
+            };
+
+            if (gapi.client.getToken() === null) {
+                tokenClient.requestAccessToken({ prompt: 'consent' });
+            } else {
+                tokenClient.requestAccessToken({ prompt: '' });
+            }
+        }
+
+        async function listUpcomingEvents() {
+            let response;
+            try {
+                const currentDate = new Date();
+                const startDate = new Date(currentDate);
+                startDate.setMonth(currentDate.getMonth() - 1);
+                const endDate = new Date(currentDate);
+                endDate.setMonth(currentDate.getMonth() + 1);
+
+                const request = {
+                    'calendarId': calendarId,
+                    'timeMin': startDate.toISOString(),
+                    'timeMax': endDate.toISOString(),
+                    'showDeleted': false,
+                    'singleEvents': true,
+                    'orderBy': 'startTime',
+                };
+                response = await gapi.client.calendar.events.list(request);
+                console.log("Events fetched:", response);
+            } catch (err) {
+                console.error("Error fetching events:", err);
+                return;
+            }
+
+            const events = response.result.items;
+            if (!events || events.length === 0) {
+                console.log('No events found.');
+                return;
+            }
+
+            const eventDropdown = document.getElementById('eventName');
+            eventDropdown.innerHTML = '';  // Clear existing options
+
+            const pastEventsGroup = document.createElement('optgroup');
+            pastEventsGroup.label = "Completed";
+            const futureEventsGroup = document.createElement('optgroup');
+            futureEventsGroup.label = "Upcoming";
+
+            const now = new Date();
+            events.forEach(event => {
+                const option = document.createElement('option');
+                option.value = event.summary;
+                option.text = event.summary;
+
+                const eventStart = new Date(event.start.dateTime || event.start.date);
+                if (eventStart < now) {
+                    pastEventsGroup.appendChild(option);
+                } else {
+                    futureEventsGroup.appendChild(option);
+                }
+            });
+
+            eventDropdown.appendChild(pastEventsGroup);
+            eventDropdown.appendChild(futureEventsGroup);
+        }
+
+        function handleCredentialResponse(response) {
+            console.log("Encoded JWT ID token: " + response.credential);
+            // Here you would send the token to your backend to verify and exchange for session tokens
+            listUpcomingEvents();
+        }
+
+        function generateFilename(event) {
+            event.preventDefault(); // Prevent the form from submitting
+
+            const eventName = document.getElementById('eventName').value;
+            const hiringEntity = document.getElementById('hiringEntity').value;
+            const dates = document.getElementById('dates').value.split(' - ');
+            const startDate = dates[0];
+            const endDate = dates[1];
+
+            const formatDate = dateStr => {
+                const [month, day, year] = dateStr.split("/");
+                return `${month}_${day}_${year.substring(2)}`;
+            };
+
+            let filename = `Eric Weiss - Invoice for Labor - ${hiringEntity} - ${eventName} - ${formatDate(startDate)}`;
+            if (startDate !== endDate) {
+                filename += `-${formatDate(endDate)}`;
+            }
+            filename += '.PDF';
+
+            document.getElementById('filename').innerText = filename;
+        }
+
+        window.onload = function() {
+            document.getElementById('authorize_button').style.visibility = 'hidden';
+            console.log("Window loaded");
+            gapiLoaded();
+            gisLoaded();
+
+            // Initialize the date range picker
+            $('#dates').daterangepicker({
+                autoUpdateInput: false,
+                autoApply: true,
+                locale: {
+                    format: 'MM/DD/YYYY'
+                }
+            });
+
+            $('#dates').on('apply.daterangepicker', function(ev, picker) {
+                $(this).val(picker.startDate.format('MM/DD/YYYY') + ' - ' + picker.endDate.format('MM/DD/YYYY'));
+            });
+
+            $('#dates').on('cancel.daterangepicker', function(ev, picker) {
+                $(this).val('');
+            });
+        };
+    </script>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            margin: 20px;
+        }
+        h1 {
+            font-size: 24px;
+        }
+        label {
+            display: block;
+            margin-top: 10px;
+        }
+        input, select, button {
+            padding: 10px;
+            margin-top: 5px;
+            width: 100%;
+            box-sizing: border-box;
+        }
+        input[type="text"], select, button {
+            border: 1px solid #ccc;
+            border-radius: 4px;
+        }
+        input:focus, select:focus, button:focus {
+            outline: none;
+            border-color: #007BFF;
+        }
+        #filename {
+            margin-top: 20px;
+            font-weight: bold;
+            word-break: break-all;
+        }
+        @media (min-width: 600px) {
+            input, select, button {
+                width: 50%;
+            }
+        }
+    </style>
+</head>
+<body>
+    <h1>Invoice Filename Generator</h1>
+    <button id="authorize_button" onclick="handleAuthClick()">Load Google Calendar Events</button>
+    <form onsubmit="generateFilename(event)">
+        <label for="eventName">Event Name:</label>
+        <select id="eventName" name="eventName" required>
+            <option value="">Select an event</option>
+        </select><br><br>
+        
+        <label for="hiringEntity">Hiring Entity:</label>
+        <input type="text" id="hiringEntity" name="hiringEntity" required><br><br>
+
+        <label for="dates">Date(s):</label>
+        <input type="text" id="dates" name="dates" required readonly><br><br>
+
+        <button type="submit">Generate Filename</button>
+    </form>
+    <h2>Generated Filename:</h2>
+    <p id="filename"></p>
+
+    <script async defer src="https://apis.google.com/js/api.js" onload="gapiLoaded()"></script>
+    <script async defer src="https://accounts.google.com/gsi/client" onload="gisLoaded()"></script>
+</body>
+</html>
