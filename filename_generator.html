@@ -114,6 +114,9 @@
                 const option = document.createElement('option');
                 option.value = event.summary;
                 option.text = event.summary;
+                option.dataset.description = event.description || '';
+                option.dataset.startDate = event.start.dateTime || event.start.date;
+                option.dataset.endDate = event.end.dateTime || event.end.date;
 
                 const eventStart = new Date(event.start.dateTime || event.start.date);
                 if (eventStart < now) {
@@ -156,6 +159,26 @@
             document.getElementById('filename').innerText = filename;
         }
 
+        function populateFieldsFromEvent(event) {
+            const selectedOption = event.target.selectedOptions[0];
+            const description = selectedOption.dataset.description;
+            const startDate = selectedOption.dataset.startDate;
+            const endDate = selectedOption.dataset.endDate;
+
+            if (description) {
+                const hiringEntityMatch = description.match(/Hiring Entity: (.*)/);
+                if (hiringEntityMatch) {
+                    document.getElementById('hiringEntity').value = hiringEntityMatch[1];
+                }
+            }
+
+            if (startDate && endDate) {
+                const formattedStartDate = moment(startDate).format('MM/DD/YYYY');
+                const formattedEndDate = moment(endDate).format('MM/DD/YYYY');
+                document.getElementById('dates').value = formattedStartDate + ' - ' + formattedEndDate;
+            }
+        }
+
         window.onload = function() {
             document.getElementById('authorize_button').style.visibility = 'hidden';
             console.log("Window loaded");
@@ -178,6 +201,8 @@
             $('#dates').on('cancel.daterangepicker', function(ev, picker) {
                 $(this).val('');
             });
+
+            document.getElementById('eventName').addEventListener('change', populateFieldsFromEvent);
         };
     </script>
     <style>
@@ -197,8 +222,6 @@
             margin-top: 5px;
             width: 100%;
             box-sizing: border-box;
-        }
-        input[type="text"], select, button {
             border: 1px solid #ccc;
             border-radius: 4px;
         }
