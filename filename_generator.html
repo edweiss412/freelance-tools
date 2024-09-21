@@ -174,6 +174,20 @@
             filename += '.PDF';
 
             document.getElementById('filename').innerText = filename;
+
+            // Copy the filename to clipboard
+            navigator.clipboard.writeText(filename).then(() => {
+                console.log('Filename copied to clipboard');
+                // Optionally, you can show a temporary message to the user
+                const message = document.createElement('div');
+                message.textContent = 'Filename copied to clipboard!';
+                message.style.color = 'green';
+                message.style.marginTop = '10px';
+                document.getElementById('filename').after(message);
+                setTimeout(() => message.remove(), 3000); // Remove the message after 3 seconds
+            }).catch(err => {
+                console.error('Failed to copy filename: ', err);
+            });
         }
 
         function populateFieldsFromEvent(event) {
