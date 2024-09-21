@@ -148,13 +148,23 @@
             const endDate = dates[1] || dates[0];
 
             const formatDate = dateStr => {
-                const [month, day, year] = dateStr.split("/");
+                if (!dateStr) return '';
+                const parts = dateStr.split("/");
+                if (parts.length !== 3) return '';
+                const [month, day, year] = parts;
                 return `${month}_${day}_${year.substring(2)}`;
             };
 
-            let filename = `Eric Weiss - Invoice for Labor - ${hiringEntity} - ${eventName} - ${formatDate(startDate)}`;
-            if (startDate !== endDate) {
-                filename += `-${formatDate(endDate)}`;
+            let filename = `Eric Weiss - Invoice for Labor - ${hiringEntity} - ${eventName}`;
+            const formattedStartDate = formatDate(startDate);
+            if (formattedStartDate) {
+                filename += ` - ${formattedStartDate}`;
+                if (startDate !== endDate) {
+                    const formattedEndDate = formatDate(endDate);
+                    if (formattedEndDate) {
+                        filename += `-${formattedEndDate}`;
+                    }
+                }
             }
             filename += '.PDF';
 
@@ -185,14 +195,13 @@
             }
         }
 
-        // Add event listener for manual event name input
-        document.getElementById('manualEventName').addEventListener('input', function() {
-            if (this.value.trim() !== '') {
-                document.getElementById('eventName').value = '';
-            }
-        });
-
         window.onload = function() {
+            // Add event listener for manual event name input
+            document.getElementById('manualEventName').addEventListener('input', function() {
+                if (this.value.trim() !== '') {
+                    document.getElementById('eventName').value = '';
+                }
+            });
             document.getElementById('authorize_button').style.visibility = 'hidden';
             console.log("Window loaded");
             gapiLoaded();
