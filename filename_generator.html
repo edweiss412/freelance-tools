@@ -14,11 +14,18 @@
         let gisInited = false;
         const calendarId = 'd9cb698b39b472c6e2fff33371c0193592456c77e7b4f7d32fd823c2460c77c0@group.calendar.google.com'; // Replace with your actual Calendar ID
 
+        /**
+         * Callback function for when GAPI is loaded.
+         * Initializes the GAPI client.
+         */
         function gapiLoaded() {
             console.log("GAPI loaded");
             gapi.load('client', initializeGapiClient);
         }
 
+        /**
+         * Initializes the GAPI client with the necessary configurations.
+         */
         async function initializeGapiClient() {
             try {
                 await gapi.client.init({
@@ -33,6 +40,10 @@
             }
         }
 
+        /**
+         * Callback function for when Google Identity Services (GIS) is loaded.
+         * Initializes the token client.
+         */
         function gisLoaded() {
             console.log("GIS loaded");
             tokenClient = google.accounts.oauth2.initTokenClient({
@@ -45,6 +56,9 @@
             maybeEnableButtons();
         }
 
+        /**
+         * Enables the authorization button if both GAPI and GIS are initialized.
+         */
         function maybeEnableButtons() {
             if (gapiInited && gisInited) {
                 document.getElementById('authorize_button').style.visibility = 'visible';
@@ -52,6 +66,10 @@
             }
         }
 
+        /**
+         * Handles the click event on the authorization button.
+         * Requests access token and lists upcoming events.
+         */
         function handleAuthClick() {
             console.log("Auth button clicked");
             tokenClient.callback = async (resp) => {
@@ -69,6 +87,9 @@
             }
         }
 
+        /**
+         * Fetches and displays upcoming events from the Google Calendar.
+         */
         async function listUpcomingEvents() {
             let response;
             try {
@@ -128,12 +149,20 @@
             eventDropdown.appendChild(futureEventsGroup);
         }
 
+        /**
+         * Handles the credential response from Google Identity Services.
+         * @param {Object} response - The credential response object.
+         */
         function handleCredentialResponse(response) {
             console.log("Encoded JWT ID token: " + response.credential);
             // Here you would send the token to your backend to verify and exchange for session tokens
             listUpcomingEvents();
         }
 
+        /**
+         * Generates the filename based on the form inputs and copies it to the clipboard.
+         * @param {Event} event - The form submission event.
+         */
         function generateFilename(event) {
             event.preventDefault(); // Prevent the form from submitting
 
@@ -193,6 +222,10 @@
             });
         }
 
+        /**
+         * Populates form fields based on the selected event from the dropdown.
+         * @param {Event} event - The change event from the event dropdown.
+         */
         function populateFieldsFromEvent(event) {
             const selectedOption = event.target.selectedOptions[0];
             const description = selectedOption.dataset.description;
@@ -217,6 +250,10 @@
             }
         }
 
+        /**
+         * Initializes the page when the window loads.
+         * Sets up event listeners and initializes components.
+         */
         window.onload = function() {
             // Add event listener for manual event name input
             document.getElementById('manualEventName').addEventListener('input', function() {
