@@ -6,9 +6,12 @@
     <title>Invoice Filename Generator</title>
     <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/flatpickr/dist/flatpickr.min.css">
     <script src="https://cdn.jsdelivr.net/npm/flatpickr"></script>
+    <!-- Load Google Identity Services for OAuth -->
     <script src="https://accounts.google.com/gsi/client" async defer></script>
+    <!-- Load Google API Client Library (GAPI) -->
     <script src="https://apis.google.com/js/api.js"></script>
     <script>
+        // OAuth token client (handled by Google Identity Services)
         let tokenClient;
         let gapiInited = false;
         let gisInited = false;
@@ -77,9 +80,11 @@
                     console.error("Error in token client callback:", resp);
                     return;
                 }
+                // Once we have the token, use GAPI to fetch events
                 await listUpcomingEvents();
             };
 
+            // Request an access token using OAuth
             if (gapi.client.getToken() === null) {
                 tokenClient.requestAccessToken({ prompt: 'consent' });
             } else {
