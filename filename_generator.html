@@ -143,6 +143,7 @@
                 eventName = manualEventName;
             }
             const hiringEntity = document.getElementById('hiringEntity').value;
+            const jobReference = document.getElementById('jobReference').value.trim();
             const dates = document.getElementById('dates').value.split(' to ');
             const startDate = dates[0];
             const endDate = dates[1] || dates[0];
@@ -155,7 +156,11 @@
                 return `${month}_${day}_${year.substring(2)}`;
             };
 
-            let filename = `Eric Weiss - Invoice for Labor - ${hiringEntity} - ${eventName}`;
+            let filename = `Eric Weiss - Invoice for Labor - ${hiringEntity}`;
+            if (jobReference) {
+                filename += ` - ${jobReference}`;
+            }
+            filename += ` - ${eventName}`;
             const formattedStartDate = formatDate(startDate);
             if (formattedStartDate) {
                 filename += ` - ${formattedStartDate}`;
@@ -292,6 +297,9 @@
         
         <label for="hiringEntity">Hiring Entity:</label>
         <input type="text" id="hiringEntity" name="hiringEntity" required><br><br>
+
+        <label for="jobReference">Job Reference #:</label>
+        <input type="text" id="jobReference" name="jobReference"><br><br>
 
         <label for="dates">Date(s):</label>
         <input type="text" id="dates" name="dates" required readonly><br><br>
