@@ -139,7 +139,11 @@
         function generateFilename(event) {
             event.preventDefault(); // Prevent the form from submitting
 
-            const eventName = document.getElementById('eventName').value;
+            let eventName = document.getElementById('eventName').value;
+            const manualEventName = document.getElementById('manualEventName').value.trim();
+            if (manualEventName) {
+                eventName = manualEventName;
+            }
             const hiringEntity = document.getElementById('hiringEntity').value;
             const dates = document.getElementById('dates').value.split(' - ');
             const startDate = dates[0];
@@ -165,6 +169,9 @@
             const startDate = selectedOption.dataset.startDate;
             const endDate = selectedOption.dataset.endDate;
 
+            // Clear the manual event name input
+            document.getElementById('manualEventName').value = '';
+
             if (description) {
                 const hiringEntityMatch = description.match(/Hiring Entity: (.*)/);
                 if (hiringEntityMatch) {
@@ -178,6 +185,13 @@
                 document.getElementById('dates').value = formattedStartDate + ' - ' + formattedEndDate;
             }
         }
+
+        // Add event listener for manual event name input
+        document.getElementById('manualEventName').addEventListener('input', function() {
+            if (this.value.trim() !== '') {
+                document.getElementById('eventName').value = '';
+            }
+        });
 
         window.onload = function() {
             document.getElementById('authorize_button').style.visibility = 'hidden';
@@ -246,9 +260,11 @@
     <button id="authorize_button" onclick="handleAuthClick()">Load Google Calendar Events</button>
     <form onsubmit="generateFilename(event)">
         <label for="eventName">Event Name:</label>
-        <select id="eventName" name="eventName" required>
+        <select id="eventName" name="eventName">
             <option value="">Select an event</option>
-        </select><br><br>
+        </select>
+        <label for="manualEventName">Or enter event name manually:</label>
+        <input type="text" id="manualEventName" name="manualEventName"><br><br>
         
         <label for="hiringEntity">Hiring Entity:</label>
         <input type="text" id="hiringEntity" name="hiringEntity" required><br><br>
