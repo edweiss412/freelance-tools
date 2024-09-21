@@ -199,14 +199,12 @@
             gisLoaded();
 
             // Initialize Flatpickr
-            flatpickr(".flatpickr-wrapper", {
+            flatpickr("#dates", {
                 mode: "range",
                 dateFormat: "m/d/Y",
-                allowInput: true,
-                wrap: true,
                 clickOpens: true,
                 disableMobile: false,
-                onClose: function(selectedDates, dateStr, instance) {
+                onChange: function(selectedDates, dateStr, instance) {
                     if (selectedDates.length === 2) {
                         const startDate = selectedDates[0];
                         const endDate = selectedDates[1];
@@ -254,40 +252,17 @@
                 width: 50%;
             }
         }
-        .flatpickr-wrapper {
-            display: inline-block;
-            position: relative;
-            width: 100%;
+        /* Custom styles for Flatpickr */
+        .flatpickr-calendar {
+            box-shadow: 0 3px 13px rgba(0,0,0,0.08);
         }
-        @media (min-width: 600px) {
-            .flatpickr-wrapper {
-                width: 50%;
-            }
+        .flatpickr-day.selected {
+            background: #007BFF;
+            border-color: #007BFF;
         }
-        .flatpickr-wrapper input {
-            width: calc(100% - 60px);
-            padding-right: 30px;
-        }
-        .input-button {
-            position: absolute;
-            top: 50%;
-            transform: translateY(-50%);
-            right: 0;
-            width: 30px;
-            height: 30px;
-            line-height: 30px;
-            text-align: center;
-            color: #555;
-            cursor: pointer;
-        }
-        .input-button[data-toggle] {
-            right: 30px;
-        }
-        .icon-calendar::before {
-            content: "📅";
-        }
-        .icon-close::before {
-            content: "❌";
+        .flatpickr-day.inRange {
+            background: #E6F2FF;
+            border-color: #E6F2FF;
         }
     </style>
     <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/flatpickr/dist/flatpickr.min.css">
@@ -307,15 +282,7 @@
         <input type="text" id="hiringEntity" name="hiringEntity" required><br><br>
 
         <label for="dates">Date(s):</label>
-        <div class="flatpickr-wrapper">
-            <input type="text" id="dates" name="dates" data-input required>
-            <a class="input-button" title="toggle" data-toggle>
-                <i class="icon-calendar"></i>
-            </a>
-            <a class="input-button" title="clear" data-clear>
-                <i class="icon-close"></i>
-            </a>
-        </div><br><br>
+        <input type="text" id="dates" name="dates" required readonly><br><br>
 
         <button type="submit">Generate Filename</button>
     </form>
