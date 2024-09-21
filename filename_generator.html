@@ -142,6 +142,9 @@
             if (manualEventName) {
                 eventName = manualEventName;
             }
+            // Remove "Unconfirmed", "Confirmed", and "Day x/x" from the event name
+            eventName = eventName.replace(/(Unconfirmed|Confirmed)/gi, '').replace(/Day \d+\/\d+/g, '').trim();
+            
             const hiringEntity = document.getElementById('hiringEntity').value;
             const jobReference = document.getElementById('jobReference').value.trim();
             const dates = document.getElementById('dates').value.split(' to ');
