@@ -199,12 +199,13 @@
             gisLoaded();
 
             // Initialize Flatpickr
-            flatpickr("#dates", {
+            flatpickr(".flatpickr-wrapper", {
                 mode: "range",
                 dateFormat: "m/d/Y",
                 allowInput: true,
                 wrap: true,
                 clickOpens: true,
+                disableMobile: false,
                 onClose: function(selectedDates, dateStr, instance) {
                     if (selectedDates.length === 2) {
                         const startDate = selectedDates[0];
@@ -253,7 +254,43 @@
                 width: 50%;
             }
         }
+        .flatpickr-wrapper {
+            display: inline-block;
+            position: relative;
+            width: 100%;
+        }
+        @media (min-width: 600px) {
+            .flatpickr-wrapper {
+                width: 50%;
+            }
+        }
+        .flatpickr-wrapper input {
+            width: calc(100% - 60px);
+            padding-right: 30px;
+        }
+        .input-button {
+            position: absolute;
+            top: 50%;
+            transform: translateY(-50%);
+            right: 0;
+            width: 30px;
+            height: 30px;
+            line-height: 30px;
+            text-align: center;
+            color: #555;
+            cursor: pointer;
+        }
+        .input-button[data-toggle] {
+            right: 30px;
+        }
+        .icon-calendar::before {
+            content: "📅";
+        }
+        .icon-close::before {
+            content: "❌";
+        }
     </style>
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/flatpickr/dist/flatpickr.min.css">
 </head>
 <body>
     <h1>Invoice Filename Generator</h1>
@@ -270,7 +307,15 @@
         <input type="text" id="hiringEntity" name="hiringEntity" required><br><br>
 
         <label for="dates">Date(s):</label>
-        <input type="text" id="dates" name="dates" required><br><br>
+        <div class="flatpickr-wrapper">
+            <input type="text" id="dates" name="dates" data-input required>
+            <a class="input-button" title="toggle" data-toggle>
+                <i class="icon-calendar"></i>
+            </a>
+            <a class="input-button" title="clear" data-clear>
+                <i class="icon-close"></i>
+            </a>
+        </div><br><br>
 
         <button type="submit">Generate Filename</button>
     </form>
