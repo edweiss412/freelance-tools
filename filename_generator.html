@@ -22,12 +22,16 @@
         const CALENDAR_ID = 'd9cb698b39b472c6e2fff33371c0193592456c77e7b4f7d32fd823c2460c77c0@group.calendar.google.com';
 
         function initializeAirtable() {
+            if (typeof Airtable === 'undefined') {
+                console.error('Airtable is not defined. The script may not have loaded properly.');
+                return;
+            }
             Airtable.configure({
                 apiKey: AIRTABLE_API_KEY
             });
         }
 
-        // We'll call initializeAirtable after the DOM is fully loaded
+        // We'll call initializeAirtable after the DOM is fully loaded and Airtable script is loaded
 
         async function fetchClientsFromAirtable() {
             const base = Airtable.base(AIRTABLE_BASE_ID);
@@ -256,6 +260,19 @@
         }
 
         window.onload = async function() {
+            // Check if Airtable script is loaded
+            if (typeof Airtable === 'undefined') {
+                console.error('Airtable script is not loaded. Waiting for it to load...');
+                await new Promise(resolve => {
+                    const checkAirtable = setInterval(() => {
+                        if (typeof Airtable !== 'undefined') {
+                            clearInterval(checkAirtable);
+                            resolve();
+                        }
+                    }, 100);
+                });
+            }
+
             // Initialize Airtable
             initializeAirtable();
 
