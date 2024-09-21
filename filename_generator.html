@@ -4,12 +4,10 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Invoice Filename Generator</title>
-    <link rel="stylesheet" type="text/css" href="https://cdn.jsdelivr.net/npm/daterangepicker/daterangepicker.css" />
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/flatpickr/dist/flatpickr.min.css">
+    <script src="https://cdn.jsdelivr.net/npm/flatpickr"></script>
     <script src="https://accounts.google.com/gsi/client" async defer></script>
     <script src="https://apis.google.com/js/api.js"></script>
-    <script src="https://cdn.jsdelivr.net/npm/jquery@3.6.0/dist/jquery.min.js"></script>
-    <script src="https://cdn.jsdelivr.net/npm/moment@2.29.1/min/moment.min.js"></script>
-    <script src="https://cdn.jsdelivr.net/npm/daterangepicker/daterangepicker.min.js"></script>
     <script>
         let tokenClient;
         let gapiInited = false;
@@ -145,9 +143,9 @@
                 eventName = manualEventName;
             }
             const hiringEntity = document.getElementById('hiringEntity').value;
-            const dates = document.getElementById('dates').value.split(' - ');
+            const dates = document.getElementById('dates').value.split(' to ');
             const startDate = dates[0];
-            const endDate = dates[1];
+            const endDate = dates[1] || dates[0];
 
             const formatDate = dateStr => {
                 const [month, day, year] = dateStr.split("/");
@@ -180,9 +178,10 @@
             }
 
             if (startDate && endDate) {
-                const formattedStartDate = moment(startDate).format('MM/DD/YYYY');
-                const formattedEndDate = moment(endDate).format('MM/DD/YYYY');
-                document.getElementById('dates').value = formattedStartDate + ' - ' + formattedEndDate;
+                const formattedStartDate = new Date(startDate).toLocaleDateString('en-US', {month: '2-digit', day: '2-digit', year: 'numeric'});
+                const formattedEndDate = new Date(endDate).toLocaleDateString('en-US', {month: '2-digit', day: '2-digit', year: 'numeric'});
+                document.getElementById('dates').value = `${formattedStartDate} to ${formattedEndDate}`;
+                flatpickr("#dates").setDate([new Date(startDate), new Date(endDate)]);
             }
         }
 
@@ -199,21 +198,21 @@
             gapiLoaded();
             gisLoaded();
 
-            // Initialize the date range picker
-            $('#dates').daterangepicker({
-                autoUpdateInput: false,
-                autoApply: true,
-                locale: {
-                    format: 'MM/DD/YYYY'
+            // Initialize Flatpickr
+            flatpickr("#dates", {
+                mode: "range",
+                dateFormat: "m/d/Y",
+                minDate: "today",
+                allowInput: true,
+                onClose: function(selectedDates, dateStr, instance) {
+                    if (selectedDates.length === 2) {
+                        const startDate = selectedDates[0];
+                        const endDate = selectedDates[1];
+                        if (endDate < startDate) {
+                            instance.setDate([startDate, startDate]);
+                        }
+                    }
                 }
-            });
-
-            $('#dates').on('apply.daterangepicker', function(ev, picker) {
-                $(this).val(picker.startDate.format('MM/DD/YYYY') + ' - ' + picker.endDate.format('MM/DD/YYYY'));
-            });
-
-            $('#dates').on('cancel.daterangepicker', function(ev, picker) {
-                $(this).val('');
             });
 
             document.getElementById('eventName').addEventListener('change', populateFieldsFromEvent);
