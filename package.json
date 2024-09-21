@@ -1,0 +1,8 @@
+{
+  "name": "freelance-tools",
+  "version": "1.0.0",
+  "description": "Freelance tools for invoice filename generation",
+  "scripts": {
+    "build": "echo 'No build step required'"
+  }
+}

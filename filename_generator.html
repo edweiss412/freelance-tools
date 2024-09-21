@@ -1,0 +1,394 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Invoice Filename Generator</title>
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/flatpickr/dist/flatpickr.min.css">
+    <script src="https://cdn.jsdelivr.net/npm/flatpickr"></script>
+    <script src="https://accounts.google.com/gsi/client" async defer></script>
+    <script src="https://apis.google.com/js/api.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/airtable@0.11.4/build/airtable.browser.js"></script>
+    <script>
+        let tokenClient;
+        let gapiInited = false;
+        let gisInited = false;
+
+        function initializeAirtable() {
+            Airtable.configure({
+                apiKey: 'pataZJaaBa38uINul.fccd7d421dcc83481ac22a4dfb1dc80aa4f20b92f5e7723f82144eb5ff9f7c9e'
+            });
+        }
+
+        // Call initializeAirtable immediately
+        initializeAirtable();
+
+        async function fetchClientsFromAirtable() {
+            const base = Airtable.base('appWWSS7kCr1ebrpw');
+            const clients = [];
+
+            await base('Clients').select({
+                fields: ['Client Name']
+            }).eachPage(function page(records, fetchNextPage) {
+                records.forEach(function(record) {
+                    clients.push(record.get('Client Name'));
+                });
+                fetchNextPage();
+            });
+
+            return clients;
+        }
+
+        function gapiLoaded() {
+            console.log("GAPI loaded");
+            gapi.load('client', initializeGapiClient);
+        }
+
+        async function initializeGapiClient() {
+            try {
+                await gapi.client.init({
+                    apiKey: 'AIzaSyBnyXIwJQ6v37a6hJdyBwreG8KHgWRtBjE',
+                    discoveryDocs: ["https://www.googleapis.com/discovery/v1/apis/calendar/v3/rest"],
+                });
+                gapiInited = true;
+                console.log("GAPI client initialized");
+                maybeEnableButtons();
+            } catch (error) {
+                console.error("Error initializing GAPI client:", error);
+            }
+        }
+
+        function gisLoaded() {
+            console.log("GIS loaded");
+            const clientId = '917046122705-82881lq22cmdo67r46tqvbc5v1f8j7aa.apps.googleusercontent.com';
+            console.log("Using client ID:", clientId);
+            tokenClient = google.accounts.oauth2.initTokenClient({
+                client_id: clientId,
+                scope: 'https://www.googleapis.com/auth/calendar.readonly',
+                callback: handleCredentialResponse,
+            });
+            gisInited = true;
+            console.log("Token client initialized");
+            maybeEnableButtons();
+        }
+
+        function maybeEnableButtons() {
+            if (gapiInited && gisInited) {
+                document.getElementById('authorize_button').style.visibility = 'visible';
+                console.log("Buttons enabled");
+            }
+        }
+
+        function handleAuthClick() {
+            console.log("Auth button clicked");
+            tokenClient.callback = async (resp) => {
+                if (resp.error) {
+                    console.error("Error in token client callback:", resp);
+                    document.getElementById('auth-error').textContent = `Authentication error: ${resp.error}. Please check your Google Cloud Console configuration.`;
+                    return;
+                }
+                document.getElementById('auth-error').textContent = '';
+                await listUpcomingEvents();
+            };
+
+            if (gapi.client.getToken() === null) {
+                tokenClient.requestAccessToken({ prompt: 'consent' });
+            } else {
+                tokenClient.requestAccessToken({ prompt: '' });
+            }
+        }
+
+        async function listUpcomingEvents() {
+            let response;
+            try {
+                const currentDate = new Date();
+                const startDate = new Date(currentDate);
+                startDate.setMonth(currentDate.getMonth() - 1);
+                const endDate = new Date(currentDate);
+                endDate.setMonth(currentDate.getMonth() + 1);
+
+                const request = {
+                    'calendarId': 'd9cb698b39b472c6e2fff33371c0193592456c77e7b4f7d32fd823c2460c77c0@group.calendar.google.com',
+                    'timeMin': startDate.toISOString(),
+                    'timeMax': endDate.toISOString(),
+                    'showDeleted': false,
+                    'singleEvents': true,
+                    'orderBy': 'startTime',
+                };
+                response = await gapi.client.calendar.events.list(request);
+                console.log("Events fetched:", response);
+            } catch (err) {
+                console.error("Error fetching events:", err);
+                return;
+            }
+
+            const events = response.result.items;
+            if (!events || events.length === 0) {
+                console.log('No events found.');
+                return;
+            }
+
+            const eventDropdown = document.getElementById('eventName');
+            eventDropdown.innerHTML = '';  // Clear existing options
+
+            const pastEventsGroup = document.createElement('optgroup');
+            pastEventsGroup.label = "Completed";
+            const futureEventsGroup = document.createElement('optgroup');
+            futureEventsGroup.label = "Upcoming";
+
+            const now = new Date();
+            events.forEach(event => {
+                const option = document.createElement('option');
+                option.value = event.summary;
+                option.text = event.summary;
+                option.dataset.description = event.description || '';
+                option.dataset.startDate = event.start.dateTime || event.start.date;
+                option.dataset.endDate = event.end.dateTime || event.end.date;
+
+                const eventStart = new Date(event.start.dateTime || event.start.date);
+                if (eventStart < now) {
+                    pastEventsGroup.appendChild(option);
+                } else {
+                    futureEventsGroup.appendChild(option);
+                }
+            });
+
+            eventDropdown.appendChild(pastEventsGroup);
+            eventDropdown.appendChild(futureEventsGroup);
+        }
+
+        function handleCredentialResponse(response) {
+            console.log("Encoded JWT ID token: " + response.credential);
+            // Here you would send the token to your backend to verify and exchange for session tokens
+            listUpcomingEvents();
+        }
+
+        function generateFilename(event) {
+            event.preventDefault(); // Prevent the form from submitting
+
+            let eventName = document.getElementById('eventName').value;
+            const manualEventName = document.getElementById('manualEventName').value.trim();
+            if (manualEventName) {
+                eventName = manualEventName;
+            }
+            // Remove "Unconfirmed", "Confirmed", and "Day x/x" from the event name
+            eventName = eventName.replace(/(Unconfirmed|Confirmed)/gi, '').replace(/Day \d+\/\d+/g, '').trim();
+            
+            let hiringEntity = document.getElementById('hiringEntity').value;
+            const manualHiringEntity = document.getElementById('manualHiringEntity').value.trim();
+            if (manualHiringEntity) {
+                hiringEntity = manualHiringEntity;
+            }
+            const jobReference = document.getElementById('jobReference').value.trim();
+            const dates = document.getElementById('dates').value.split(' to ');
+            const startDate = dates[0];
+            const endDate = dates[1] || dates[0];
+
+            const formatDate = dateStr => {
+                if (!dateStr) return '';
+                const parts = dateStr.split("/");
+                if (parts.length !== 3) return '';
+                const [month, day, year] = parts;
+                return `${month}_${day}_${year.substring(2)}`;
+            };
+
+            let filename = `Eric Weiss - Invoice for Labor - ${hiringEntity}`;
+            if (jobReference) {
+                filename += ` - ${jobReference}`;
+            }
+            filename += ` - ${eventName}`;
+            const formattedStartDate = formatDate(startDate);
+            if (formattedStartDate) {
+                filename += ` - ${formattedStartDate}`;
+                if (startDate !== endDate) {
+                    const formattedEndDate = formatDate(endDate);
+                    if (formattedEndDate) {
+                        filename += `-${formattedEndDate}`;
+                    }
+                }
+            }
+            filename += '.PDF';
+
+            document.getElementById('filename').innerText = filename;
+
+            // Copy the filename to clipboard
+            navigator.clipboard.writeText(filename).then(() => {
+                console.log('Filename copied to clipboard');
+                // Optionally, you can show a temporary message to the user
+                const message = document.createElement('div');
+                message.textContent = 'Filename copied to clipboard!';
+                message.style.color = 'green';
+                message.style.marginTop = '10px';
+                document.getElementById('filename').after(message);
+                setTimeout(() => message.remove(), 3000); // Remove the message after 3 seconds
+            }).catch(err => {
+                console.error('Failed to copy filename: ', err);
+            });
+        }
+
+        function populateFieldsFromEvent(event) {
+            const selectedOption = event.target.selectedOptions[0];
+            const description = selectedOption.dataset.description;
+            const startDate = selectedOption.dataset.startDate;
+            const endDate = selectedOption.dataset.endDate;
+
+            // Clear the manual event name input
+            document.getElementById('manualEventName').value = '';
+
+            if (description) {
+                const hiringEntityMatch = description.match(/Hiring Entity: (.*)/);
+                if (hiringEntityMatch) {
+                    document.getElementById('hiringEntity').value = hiringEntityMatch[1];
+                }
+            }
+
+            if (startDate && endDate) {
+                const formattedStartDate = new Date(startDate).toLocaleDateString('en-US', {month: '2-digit', day: '2-digit', year: 'numeric'});
+                const formattedEndDate = new Date(endDate).toLocaleDateString('en-US', {month: '2-digit', day: '2-digit', year: 'numeric'});
+                document.getElementById('dates').value = `${formattedStartDate} to ${formattedEndDate}`;
+                flatpickr("#dates").setDate([new Date(startDate), new Date(endDate)]);
+            }
+        }
+
+        window.onload = async function() {
+            // Add event listener for manual event name input
+            document.getElementById('manualEventName').addEventListener('input', function() {
+                if (this.value.trim() !== '') {
+                    document.getElementById('eventName').value = '';
+                }
+            });
+
+            // Add event listener for manual hiring entity input
+            document.getElementById('manualHiringEntity').addEventListener('input', function() {
+                if (this.value.trim() !== '') {
+                    document.getElementById('hiringEntity').value = '';
+                }
+            });
+
+            // Add event listener for hiring entity dropdown
+            document.getElementById('hiringEntity').addEventListener('change', function() {
+                if (this.value !== '') {
+                    document.getElementById('manualHiringEntity').value = '';
+                }
+            });
+            document.getElementById('authorize_button').style.visibility = 'hidden';
+            console.log("Window loaded");
+            gapiLoaded();
+            gisLoaded();
+
+            document.getElementById('eventName').addEventListener('change', populateFieldsFromEvent);
+
+            // Populate Hiring Entity dropdown
+            const clients = await fetchClientsFromAirtable();
+            const hiringEntityDropdown = document.getElementById('hiringEntity');
+            clients.forEach(client => {
+                const option = document.createElement('option');
+                option.value = client;
+                option.textContent = client;
+                hiringEntityDropdown.appendChild(option);
+            });
+
+            // Initialize Flatpickr
+            console.log("Initializing Flatpickr");
+            const fp = flatpickr("#dates", {
+                mode: "range",
+                dateFormat: "m/d/Y",
+                clickOpens: true,
+                disableMobile: "true",
+                onChange: function(selectedDates, dateStr, instance) {
+                    console.log("Date selected:", dateStr);
+                    if (selectedDates.length === 2) {
+                        const startDate = selectedDates[0];
+                        const endDate = selectedDates[1];
+                        if (endDate < startDate) {
+                            instance.setDate([startDate, startDate]);
+                        }
+                    }
+                }
+            });
+            console.log("Flatpickr initialized:", fp);
+        };
+    </script>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            margin: 20px;
+        }
+        h1 {
+            font-size: 24px;
+        }
+        label {
+            display: block;
+            margin-top: 10px;
+        }
+        input, select, button {
+            padding: 10px;
+            margin-top: 5px;
+            width: 100%;
+            box-sizing: border-box;
+            border: 1px solid #ccc;
+            border-radius: 4px;
+        }
+        input:focus, select:focus, button:focus {
+            outline: none;
+            border-color: #007BFF;
+        }
+        #filename {
+            margin-top: 20px;
+            font-weight: bold;
+            word-break: break-all;
+        }
+        @media (min-width: 600px) {
+            input, select, button {
+                width: 50%;
+            }
+        }
+        /* Custom styles for Flatpickr */
+        .flatpickr-calendar {
+            box-shadow: 0 3px 13px rgba(0,0,0,0.08);
+        }
+        .flatpickr-day.selected {
+            background: #007BFF;
+            border-color: #007BFF;
+        }
+        .flatpickr-day.inRange {
+            background: #E6F2FF;
+            border-color: #E6F2FF;
+        }
+    </style>
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/flatpickr/dist/flatpickr.min.css">
+</head>
+<body>
+    <h1>Invoice Filename Generator</h1>
+    <button id="authorize_button" onclick="handleAuthClick()">Load Google Calendar Events</button>
+    <div id="auth-error" style="color: red; margin-top: 10px;"></div>
+    <form onsubmit="generateFilename(event)">
+        <label for="eventName">Event Name:</label>
+        <select id="eventName" name="eventName">
+            <option value="">Select an event</option>
+        </select>
+        <label for="manualEventName">Or enter event name manually:</label>
+        <input type="text" id="manualEventName" name="manualEventName"><br><br>
+        
+        <label for="hiringEntity">Hiring Entity:</label>
+        <select id="hiringEntity" name="hiringEntity">
+            <option value="">Select a client</option>
+        </select>
+        <label for="manualHiringEntity">Or enter Hiring Entity manually:</label>
+        <input type="text" id="manualHiringEntity" name="manualHiringEntity"><br><br>
+
+        <label for="jobReference">Job Reference #:</label>
+        <input type="text" id="jobReference" name="jobReference"><br><br>
+
+        <label for="dates">Date(s):</label>
+        <input type="text" id="dates" name="dates" required readonly><br><br>
+
+        <button type="submit">Generate Filename</button>
+    </form>
+    <h2>Generated Filename:</h2>
+    <p id="filename"></p>
+
+    <script async defer src="https://apis.google.com/js/api.js" onload="gapiLoaded()"></script>
+    <script async defer src="https://accounts.google.com/gsi/client" onload="gisLoaded()"></script>
+</body>
+</html>
