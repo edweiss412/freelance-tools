@@ -198,13 +198,17 @@
             gapiLoaded();
             gisLoaded();
 
+            document.getElementById('eventName').addEventListener('change', populateFieldsFromEvent);
+
             // Initialize Flatpickr
-            flatpickr("#dates", {
+            console.log("Initializing Flatpickr");
+            const fp = flatpickr("#dates", {
                 mode: "range",
                 dateFormat: "m/d/Y",
                 clickOpens: true,
-                disableMobile: false,
+                disableMobile: "true",
                 onChange: function(selectedDates, dateStr, instance) {
+                    console.log("Date selected:", dateStr);
                     if (selectedDates.length === 2) {
                         const startDate = selectedDates[0];
                         const endDate = selectedDates[1];
@@ -214,8 +218,7 @@
                     }
                 }
             });
-
-            document.getElementById('eventName').addEventListener('change', populateFieldsFromEvent);
+            console.log("Flatpickr initialized:", fp);
         };
     </script>
     <style>
