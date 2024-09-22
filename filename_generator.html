@@ -202,16 +202,33 @@
             filename += ` - ${eventName}`;
 
             if (dates.length > 0) {
-                const formattedDates = dates
+                const sortedDates = dates
                     .map(date => {
                         const [month, day, year] = date.split('/');
                         return { date: new Date(year, month - 1, day), formatted: formatDate(date) };
                     })
-                    .sort((a, b) => a.date - b.date)
-                    .map(item => item.formatted)
-                    .filter(d => d !== '');
-                if (formattedDates.length > 0) {
-                    filename += ` - ${formattedDates.join('_')}`;
+                    .sort((a, b) => a.date - b.date);
+
+                const dateRanges = [];
+                let rangeStart = sortedDates[0];
+                let rangeEnd = sortedDates[0];
+
+                for (let i = 1; i < sortedDates.length; i++) {
+                    const currentDate = sortedDates[i];
+                    const prevDate = sortedDates[i - 1];
+                    
+                    if (currentDate.date - prevDate.date === 86400000) { // 24 hours in milliseconds
+                        rangeEnd = currentDate;
+                    } else {
+                        dateRanges.push(rangeStart === rangeEnd ? rangeStart.formatted : `${rangeStart.formatted}-${rangeEnd.formatted}`);
+                        rangeStart = currentDate;
+                        rangeEnd = currentDate;
+                    }
+                }
+                dateRanges.push(rangeStart === rangeEnd ? rangeStart.formatted : `${rangeStart.formatted}-${rangeEnd.formatted}`);
+
+                if (dateRanges.length > 0) {
+                    filename += ` - ${dateRanges.join('_')}`;
                 }
             }
             filename += '.PDF';
