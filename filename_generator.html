@@ -185,9 +185,7 @@
             
             const hiringEntity = document.getElementById('hiringEntity').value;
             const jobReference = document.getElementById('jobReference').value.trim();
-            const dates = document.getElementById('dates').value.split(' to ');
-            const startDate = dates[0];
-            const endDate = dates[1] || dates[0];
+            const dates = document.getElementById('dates').value.split(', ');
 
             const formatDate = dateStr => {
                 if (!dateStr) return '';
@@ -202,20 +200,17 @@
                 filename += ` - ${jobReference}`;
             }
             filename += ` - ${eventName}`;
-            const formattedStartDate = formatDate(startDate);
-            if (formattedStartDate) {
-                filename += ` - ${formattedStartDate}`;
-                if (startDate !== endDate) {
-                    const formattedEndDate = formatDate(endDate);
-                    if (formattedEndDate) {
-                        filename += `-${formattedEndDate}`;
-                    }
+
+            if (dates.length > 0) {
+                const formattedDates = dates.map(formatDate).filter(d => d !== '');
+                if (formattedDates.length > 0) {
+                    filename += ` - ${formattedDates.join('_')}`;
                 }
             }
             filename += '.PDF';
 
             // Generate email subject
-            const emailSubject = generateEmailSubject(jobReference, eventName, startDate, endDate);
+            const emailSubject = generateEmailSubject(jobReference, eventName, dates);
 
             document.getElementById('filename').innerText = filename;
             document.getElementById('emailSubject').innerText = emailSubject;
@@ -243,7 +238,7 @@
          * @param {string} endDate - The end date of the event.
          * @returns {string} The generated email subject.
          */
-        function generateEmailSubject(jobReference, eventName, startDate, endDate) {
+        function generateEmailSubject(jobReference, eventName, dates) {
             const formatDateForSubject = (dateStr) => {
                 const [month, day, year] = dateStr.split('/');
                 return `${month}/${day}`;
@@ -257,17 +252,16 @@
             
             subject += ` - ${eventName} - `;
             
-            const formattedStartDate = formatDateForSubject(startDate);
-            const formattedEndDate = formatDateForSubject(endDate);
-            
-            if (startDate === endDate) {
-                subject += formattedStartDate;
-            } else {
-                subject += `${formattedStartDate}-${formattedEndDate}`;
+            if (dates.length === 1) {
+                subject += formatDateForSubject(dates[0]);
+            } else if (dates.length > 1) {
+                const formattedDates = dates.map(formatDateForSubject);
+                subject += formattedDates.join(', ');
             }
 
-            // Add the year to the end date
-            const year = endDate.split('/')[2];
+            // Add the year to the last date
+            const lastDate = dates[dates.length - 1];
+            const year = lastDate.split('/')[2];
             subject += `/${year.slice(-2)}`;
 
             return subject;
@@ -318,19 +312,12 @@
             // Initialize Flatpickr
             console.log("Initializing Flatpickr");
             const fp = flatpickr("#dates", {
-                mode: "range",
+                mode: "multiple",
                 dateFormat: "m/d/Y",
                 clickOpens: true,
                 disableMobile: "true",
                 onChange: function(selectedDates, dateStr, instance) {
-                    console.log("Date selected:", dateStr);
-                    if (selectedDates.length === 2) {
-                        const startDate = selectedDates[0];
-                        const endDate = selectedDates[1];
-                        if (endDate < startDate) {
-                            instance.setDate([startDate, startDate]);
-                        }
-                    }
+                    console.log("Dates selected:", dateStr);
                 }
             });
             console.log("Flatpickr initialized:", fp);
@@ -406,7 +393,8 @@
         <input type="text" id="jobReference" name="jobReference"><br><br>
 
         <label for="dates">Date(s):</label>
-        <input type="text" id="dates" name="dates" required readonly><br><br>
+        <input type="text" id="dates" name="dates" required readonly>
+        <small>Select multiple dates for non-consecutive shifts</small><br><br>
 
         <button type="submit">Generate Filename</button>
     </form>
