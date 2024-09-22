@@ -249,7 +249,13 @@
                 return `${month}/${day}`;
             };
 
-            let subject = `Eric Weiss - Invoice for Labor - ${jobReference} - ${eventName} - `;
+            let subject = `Eric Weiss - Invoice for Labor`;
+            
+            if (jobReference.trim()) {
+                subject += ` - ${jobReference.trim()}`;
+            }
+            
+            subject += ` - ${eventName} - `;
             
             const formattedStartDate = formatDateForSubject(startDate);
             const formattedEndDate = formatDateForSubject(endDate);
