@@ -265,7 +265,7 @@
         function generateEmailSubject(jobReference, eventName, dates) {
             const formatDateForSubject = (dateStr) => {
                 const [month, day, year] = dateStr.split('/');
-                return `${month}/${day}`;
+                return `${month}/${day}/${year.slice(-2)}`;
             };
 
             let subject = `Eric Weiss - Invoice for Labor`;
@@ -276,17 +276,34 @@
             
             subject += ` - ${eventName} - `;
             
-            if (dates.length === 1) {
-                subject += formatDateForSubject(dates[0]);
-            } else if (dates.length > 1) {
-                const formattedDates = dates.map(formatDateForSubject);
-                subject += formattedDates.join(', ');
-            }
+            if (dates.length > 0) {
+                const sortedDates = dates
+                    .map(date => {
+                        const [month, day, year] = date.split('/');
+                        return { date: new Date(year, month - 1, day), formatted: formatDateForSubject(date) };
+                    })
+                    .sort((a, b) => a.date - b.date);
 
-            // Add the year to the last date
-            const lastDate = dates[dates.length - 1];
-            const year = lastDate.split('/')[2];
-            subject += `/${year.slice(-2)}`;
+                const dateRanges = [];
+                let rangeStart = sortedDates[0];
+                let rangeEnd = sortedDates[0];
+
+                for (let i = 1; i < sortedDates.length; i++) {
+                    const currentDate = sortedDates[i];
+                    const prevDate = sortedDates[i - 1];
+                    
+                    if (currentDate.date - prevDate.date === 86400000) { // 24 hours in milliseconds
+                        rangeEnd = currentDate;
+                    } else {
+                        dateRanges.push(rangeStart === rangeEnd ? rangeStart.formatted : `${rangeStart.formatted}-${rangeEnd.formatted}`);
+                        rangeStart = currentDate;
+                        rangeEnd = currentDate;
+                    }
+                }
+                dateRanges.push(rangeStart === rangeEnd ? rangeStart.formatted : `${rangeStart.formatted}-${rangeEnd.formatted}`);
+
+                subject += dateRanges.join(', ');
+            }
 
             return subject;
         }
