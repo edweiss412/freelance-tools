@@ -210,7 +210,11 @@
             }
             filename += '.PDF';
 
+            // Generate email subject
+            const emailSubject = generateEmailSubject(jobReference, eventName, startDate, endDate);
+
             document.getElementById('filename').innerText = filename;
+            document.getElementById('emailSubject').innerText = emailSubject;
 
             // Copy the filename to clipboard
             navigator.clipboard.writeText(filename).then(() => {
@@ -225,6 +229,38 @@
             }).catch(err => {
                 console.error('Failed to copy filename: ', err);
             });
+        }
+
+        /**
+         * Generates the email subject based on the form inputs.
+         * @param {string} jobReference - The job reference number.
+         * @param {string} eventName - The name of the event.
+         * @param {string} startDate - The start date of the event.
+         * @param {string} endDate - The end date of the event.
+         * @returns {string} The generated email subject.
+         */
+        function generateEmailSubject(jobReference, eventName, startDate, endDate) {
+            const formatDateForSubject = (dateStr) => {
+                const [month, day, year] = dateStr.split('/');
+                return `${month}/${day}`;
+            };
+
+            let subject = `Eric Weiss - Invoice for Labor - ${jobReference} - ${eventName} - `;
+            
+            const formattedStartDate = formatDateForSubject(startDate);
+            const formattedEndDate = formatDateForSubject(endDate);
+            
+            if (startDate === endDate) {
+                subject += formattedStartDate;
+            } else {
+                subject += `${formattedStartDate}-${formattedEndDate}`;
+            }
+
+            // Add the year to the end date
+            const year = endDate.split('/')[2];
+            subject += `/${year.slice(-2)}`;
+
+            return subject;
         }
 
         /**
@@ -391,6 +427,9 @@
     </form>
     <h2>Generated Filename:</h2>
     <p id="filename"></p>
+
+    <h2>Email Subject:</h2>
+    <p id="emailSubject"></p>
 
     <script async defer src="https://apis.google.com/js/api.js" onload="gapiLoaded()"></script>
     <script async defer src="https://accounts.google.com/gsi/client" onload="gisLoaded()"></script>
