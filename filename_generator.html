@@ -202,7 +202,14 @@
             filename += ` - ${eventName}`;
 
             if (dates.length > 0) {
-                const formattedDates = dates.map(formatDate).filter(d => d !== '');
+                const formattedDates = dates
+                    .map(date => {
+                        const [month, day, year] = date.split('/');
+                        return { date: new Date(year, month - 1, day), formatted: formatDate(date) };
+                    })
+                    .sort((a, b) => a.date - b.date)
+                    .map(item => item.formatted)
+                    .filter(d => d !== '');
                 if (formattedDates.length > 0) {
                     filename += ` - ${formattedDates.join('_')}`;
                 }
