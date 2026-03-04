@@ -1,0 +1,12 @@
+name = "xero-invoice-proxy"
+main = "src/index.js"
+compatibility_date = "2024-09-23"
+
+[[kv_namespaces]]
+binding = "TOKENS"
+id = "placeholder"
+
+[vars]
+ALLOWED_ORIGIN = "https://example.github.io"
+XERO_REDIRECT_URI = "https://xero-invoice-proxy.workers.dev/callback"
+FRONTEND_URL = "https://example.github.io/filename_generator.html"
