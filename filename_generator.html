@@ -505,6 +505,14 @@
                 Load Xero Invoices
             </button>
 
+            <button class="calendar-btn" id="gmail_connect_btn" onclick="connectGmail()">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                    <path d="M4 4h16c1.1 0 2 .9 2 2v12c0 1.1-.9 2-2 2H4c-1.1 0-2-.9-2-2V6c0-1.1.9-2 2-2z"/>
+                    <polyline points="22,6 12,13 2,6"/>
+                </svg>
+                Connect Gmail
+            </button>
+
             <form onsubmit="generateFilename(event)" id="mainForm">
                 <div class="field">
                     <label for="eventName">Invoice</label>
@@ -590,6 +598,13 @@
                 </svg>
                 Download Renamed PDF
             </button>
+            <button class="submit-btn download-btn" id="draftEmailBtn" style="display: none;" onclick="draftInvoiceEmail()">
+                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+                    <path d="M4 4h16c1.1 0 2 .9 2 2v12c0 1.1-.9 2-2 2H4c-1.1 0-2-.9-2-2V6c0-1.1.9-2 2-2z"/>
+                    <polyline points="22,6 12,13 2,6"/>
+                </svg>
+                Draft Invoice Email
+            </button>
         </div>
     </div>
 
@@ -598,6 +613,7 @@
     <script>
         const WORKER_URL = 'https://xero-invoice-proxy.edweiss412.workers.dev';
         let selectedInvoiceId = null;
+        let gmailConnected = false;
 
         async function loadInvoices() {
           const btn = document.getElementById('authorize_button');
@@ -872,6 +888,9 @@
             const downloadBtn = document.getElementById('downloadPdfBtn');
             downloadBtn.style.display = selectedInvoiceId ? '' : 'none';
 
+            const draftEmailBtn = document.getElementById('draftEmailBtn');
+            draftEmailBtn.style.display = (selectedInvoiceId && gmailConnected) ? '' : 'none';
+
             // Auto-copy filename
             copyToClipboard('filename', document.querySelector('#filenameOutput .copy-btn'));
         }
@@ -1063,6 +1082,117 @@
             setTimeout(() => toast.classList.remove('show'), 2200);
         }
 
+        async function connectGmail() {
+            window.location.href = `${WORKER_URL}/gmail/auth`;
+        }
+
+        async function checkGmailStatus() {
+            try {
+                const res = await fetch(`${WORKER_URL}/gmail/status`);
+                if (!res.ok) return;
+                const data = await res.json();
+                gmailConnected = data.connected;
+                if (gmailConnected) {
+                    const btn = document.getElementById('gmail_connect_btn');
+                    btn.textContent = '';
+                    const checkSvg = document.createElementNS('http://www.w3.org/2000/svg', 'svg');
+                    checkSvg.setAttribute('viewBox', '0 0 24 24');
+                    checkSvg.setAttribute('fill', 'none');
+                    checkSvg.setAttribute('stroke', 'currentColor');
+                    checkSvg.setAttribute('stroke-width', '2.5');
+                    checkSvg.setAttribute('stroke-linecap', 'round');
+                    checkSvg.setAttribute('stroke-linejoin', 'round');
+                    const polyline = document.createElementNS('http://www.w3.org/2000/svg', 'polyline');
+                    polyline.setAttribute('points', '20 6 9 17 4 12');
+                    checkSvg.appendChild(polyline);
+                    btn.appendChild(checkSvg);
+                    btn.appendChild(document.createTextNode(' Gmail Connected'));
+                    btn.style.borderColor = 'var(--success)';
+                    btn.style.color = 'var(--success)';
+                    btn.style.background = 'var(--success-bg)';
+                }
+            } catch (err) {
+                console.error('Gmail status check failed:', err);
+            }
+        }
+
+        async function draftInvoiceEmail() {
+            if (!selectedInvoiceId) return;
+
+            const btn = document.getElementById('draftEmailBtn');
+            btn.disabled = true;
+
+            // Show loading state
+            while (btn.firstChild) btn.removeChild(btn.firstChild);
+            const spinSvg = document.createElementNS('http://www.w3.org/2000/svg', 'svg');
+            spinSvg.setAttribute('width', '16');
+            spinSvg.setAttribute('height', '16');
+            spinSvg.setAttribute('viewBox', '0 0 24 24');
+            spinSvg.setAttribute('fill', 'none');
+            spinSvg.setAttribute('stroke', 'currentColor');
+            spinSvg.setAttribute('stroke-width', '2.5');
+            spinSvg.setAttribute('stroke-linecap', 'round');
+            spinSvg.setAttribute('stroke-linejoin', 'round');
+            spinSvg.style.animation = 'spin 1s linear infinite';
+            const spinPath = document.createElementNS('http://www.w3.org/2000/svg', 'path');
+            spinPath.setAttribute('d', 'M21 12a9 9 0 1 1-6.219-8.56');
+            spinSvg.appendChild(spinPath);
+            btn.appendChild(spinSvg);
+            btn.appendChild(document.createTextNode(' Creating draft...'));
+
+            try {
+                const subject = document.getElementById('emailSubject').textContent;
+                const filename = document.getElementById('filename').textContent;
+                const hiringEntity = document.getElementById('hiringEntity').value;
+
+                const res = await fetch(`${WORKER_URL}/gmail/draft`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ invoiceId: selectedInvoiceId, subject, hiringEntity, filename }),
+                });
+
+                if (res.status === 401) {
+                    const data = await res.json();
+                    if (data.error === 'gmail_auth_required') {
+                        showToast('Gmail session expired — reconnect');
+                        return;
+                    }
+                    showToast('Xero session expired — reload invoices');
+                    return;
+                }
+
+                if (!res.ok) throw new Error(`Draft creation failed: ${res.status}`);
+
+                const data = await res.json();
+                window.open(data.draftUrl, '_blank');
+                showToast('Draft created — opened in Gmail');
+            } catch (err) {
+                console.error('Draft creation failed:', err);
+                showToast('Failed to create draft');
+            } finally {
+                btn.disabled = false;
+                // Restore button content
+                while (btn.firstChild) btn.removeChild(btn.firstChild);
+                const svg = document.createElementNS('http://www.w3.org/2000/svg', 'svg');
+                svg.setAttribute('width', '16');
+                svg.setAttribute('height', '16');
+                svg.setAttribute('viewBox', '0 0 24 24');
+                svg.setAttribute('fill', 'none');
+                svg.setAttribute('stroke', 'currentColor');
+                svg.setAttribute('stroke-width', '2.5');
+                svg.setAttribute('stroke-linecap', 'round');
+                svg.setAttribute('stroke-linejoin', 'round');
+                const path = document.createElementNS('http://www.w3.org/2000/svg', 'path');
+                path.setAttribute('d', 'M4 4h16c1.1 0 2 .9 2 2v12c0 1.1-.9 2-2 2H4c-1.1 0-2-.9-2-2V6c0-1.1.9-2 2-2z');
+                const polyline = document.createElementNS('http://www.w3.org/2000/svg', 'polyline');
+                polyline.setAttribute('points', '22,6 12,13 2,6');
+                svg.appendChild(path);
+                svg.appendChild(polyline);
+                btn.appendChild(svg);
+                btn.appendChild(document.createTextNode(' Draft Invoice Email'));
+            }
+        }
+
         window.onload = function() {
             document.getElementById('manualEventName').addEventListener('input', function() {
                 if (this.value.trim() !== '') {
@@ -1079,6 +1209,8 @@
                 clickOpens: true,
                 disableMobile: "true",
             });
+
+            checkGmailStatus();
         };
     </script>
 </body>
