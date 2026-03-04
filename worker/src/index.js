@@ -311,6 +311,13 @@ async function handleGmailDraft(request, env) {
       });
     }
 
+    // Validate invoiceId is a UUID
+    if (!/^[a-f0-9-]+$/i.test(invoiceId)) {
+      return new Response(JSON.stringify({ error: 'Invalid invoiceId' }), {
+        status: 400, headers: jsonHeaders,
+      });
+    }
+
     // Get Gmail token
     const gmailToken = await getValidGmailToken(env);
     if (!gmailToken) {
@@ -390,7 +397,8 @@ async function findLastRecipient(gmailToken, hiringEntity) {
   if (!hiringEntity) return null;
 
   try {
-    const query = `from:me subject:"Invoice for Labor" "${hiringEntity}" in:sent`;
+    const sanitized = hiringEntity.replace(/"/g, '');
+    const query = `from:me subject:"Invoice for Labor" "${sanitized}" in:sent`;
     const params = new URLSearchParams({ q: query, maxResults: '1' });
     const searchRes = await fetch(`https://gmail.googleapis.com/gmail/v1/users/me/messages?${params}`, {
       headers: { 'Authorization': `Bearer ${gmailToken}` },
@@ -454,9 +462,13 @@ function buildMimeMessage({ to, subject, body, pdfBytes, pdfFilename }) {
 }
 
 function base64url(str) {
-  // MIME message is all ASCII (PDF data is already base64 within the MIME part)
-  // so btoa can handle it directly
-  return btoa(str)
+  // Use TextEncoder for binary-safe encoding (handles non-ASCII in subject/body)
+  const bytes = new TextEncoder().encode(str);
+  let binary = '';
+  for (let i = 0; i < bytes.length; i++) {
+    binary += String.fromCharCode(bytes[i]);
+  }
+  return btoa(binary)
     .replace(/\+/g, '-')
     .replace(/\//g, '_')
     .replace(/=+$/, '');
