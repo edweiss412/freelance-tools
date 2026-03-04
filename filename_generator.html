@@ -968,11 +968,13 @@
             if (manualEventName) {
                 eventName = manualEventName;
             }
-            eventName = eventName.replace(/(Unconfirmed|Confirmed)/gi, '').replace(/Day \d+\/\d+/g, '').trim();
+            eventName = eventName.replace(/(Unconfirmed|Confirmed)/gi, '').replace(/Day \d+\/\d+/g, '').replace(/\s+/g, ' ').trim();
+            if (!eventName) eventName = 'Event';
+            const sanitize = str => str.replace(/[\/\\?*"<>|:]/g, '-');
 
             const hiringEntity = document.getElementById('hiringEntity').value;
             const jobReference = document.getElementById('jobReference').value.trim();
-            const dates = document.getElementById('dates').value.split(', ');
+            const dates = document.getElementById('dates').value.split(', ').filter(d => d.trim());
 
             const formatDate = dateStr => {
                 if (!dateStr) return '';
@@ -1004,7 +1006,8 @@
                     const currentDate = sortedDates[i];
                     const prevDate = sortedDates[i - 1];
 
-                    if (currentDate.date - prevDate.date === 86400000) {
+                    const diff = Math.round((currentDate.date - prevDate.date) / 86400000);
+                    if (diff === 1) {
                         rangeEnd = currentDate;
                     } else {
                         dateRanges.push(rangeStart === rangeEnd ? rangeStart.formatted : `${rangeStart.formatted}-${rangeEnd.formatted}`);
@@ -1018,7 +1021,7 @@
                     filename += ` - ${dateRanges.join('_')}`;
                 }
             }
-            filename += '.PDF';
+            filename = sanitize(filename.replace(/\.PDF$/, '')) + '.PDF';
 
             const emailSubject = generateEmailSubject(jobReference, eventName, dates);
 
@@ -1130,9 +1133,10 @@
                 subject += ` - ${jobReference.trim()}`;
             }
 
-            subject += ` - ${eventName} - `;
+            subject += ` - ${eventName}`;
 
             if (dates.length > 0) {
+                subject += ` - `;
                 const sortedDates = dates
                     .map(date => {
                         const [month, day, year] = date.split('/');
@@ -1148,7 +1152,8 @@
                     const currentDate = sortedDates[i];
                     const prevDate = sortedDates[i - 1];
 
-                    if (currentDate.date - prevDate.date === 86400000) {
+                    const diff = Math.round((currentDate.date - prevDate.date) / 86400000);
+                    if (diff === 1) {
                         rangeEnd = currentDate;
                     } else {
                         dateRanges.push(rangeStart === rangeEnd ? rangeStart.formatted : `${rangeStart.formatted}-${rangeEnd.formatted}`);
