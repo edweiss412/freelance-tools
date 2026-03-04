@@ -4,185 +4,664 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Invoice Filename Generator</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Instrument+Serif:ital@0;1&family=DM+Sans:ital,opsz,wght@0,9..40,300..700;1,9..40,300..700&display=swap" rel="stylesheet">
     <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/flatpickr/dist/flatpickr.min.css">
     <script src="https://cdn.jsdelivr.net/npm/flatpickr"></script>
-    <!-- Load Google Identity Services for OAuth -->
-    <script src="https://accounts.google.com/gsi/client" async defer></script>
-    <!-- Load Google API Client Library (GAPI) -->
-    <script src="https://apis.google.com/js/api.js"></script>
-    <!-- Load Google Identity Services for OAuth -->
-    <script src="https://accounts.google.com/gsi/client" async defer></script>
-    <!-- Load Google API Client Library (GAPI) -->
-    <script src="https://apis.google.com/js/api.js"></script>
+    <style>
+        *, *::before, *::after {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        :root {
+            --bg: #1a1814;
+            --card: #faf6f0;
+            --card-border: #e8e0d4;
+            --text: #2c2519;
+            --text-muted: #8a7e6b;
+            --accent: #c8822a;
+            --accent-hover: #b5721f;
+            --accent-glow: rgba(200, 130, 42, 0.15);
+            --input-bg: #fff;
+            --input-border: #d9d0c3;
+            --input-focus: #c8822a;
+            --success: #3d7a4a;
+            --success-bg: rgba(61, 122, 74, 0.08);
+            --radius: 10px;
+            --radius-lg: 16px;
+            --shadow-sm: 0 1px 3px rgba(0,0,0,0.04);
+            --shadow-md: 0 4px 20px rgba(0,0,0,0.08);
+            --shadow-lg: 0 12px 48px rgba(0,0,0,0.12);
+            --transition: 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+        }
+
+        body {
+            font-family: 'DM Sans', sans-serif;
+            background: var(--bg);
+            min-height: 100vh;
+            display: flex;
+            align-items: flex-start;
+            justify-content: center;
+            padding: 24px 16px 64px;
+            -webkit-font-smoothing: antialiased;
+        }
+
+        /* Subtle texture on background */
+        body::before {
+            content: '';
+            position: fixed;
+            inset: 0;
+            background:
+                radial-gradient(ellipse at 20% 0%, rgba(200, 130, 42, 0.06) 0%, transparent 60%),
+                radial-gradient(ellipse at 80% 100%, rgba(200, 130, 42, 0.04) 0%, transparent 60%);
+            pointer-events: none;
+            z-index: 0;
+        }
+
+        .container {
+            width: 100%;
+            max-width: 560px;
+            position: relative;
+            z-index: 1;
+        }
+
+        /* Header */
+        .header {
+            text-align: center;
+            margin-bottom: 28px;
+            animation: fadeDown 0.6s ease-out;
+        }
+
+        .header h1 {
+            font-family: 'Instrument Serif', serif;
+            font-size: 2rem;
+            font-weight: 400;
+            color: var(--card);
+            letter-spacing: -0.01em;
+            line-height: 1.1;
+        }
+
+        .header p {
+            font-size: 0.85rem;
+            color: var(--text-muted);
+            margin-top: 6px;
+            letter-spacing: 0.02em;
+        }
+
+        /* Card */
+        .card {
+            background: var(--card);
+            border: 1px solid var(--card-border);
+            border-radius: var(--radius-lg);
+            padding: 32px 28px;
+            box-shadow: var(--shadow-lg);
+            animation: fadeUp 0.5s ease-out;
+        }
+
+        .card + .card {
+            margin-top: 16px;
+            animation: fadeUp 0.5s ease-out 0.1s both;
+        }
+
+        /* Calendar connect button */
+        .calendar-btn {
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 8px;
+            width: 100%;
+            padding: 12px 20px;
+            background: var(--input-bg);
+            border: 1.5px dashed var(--input-border);
+            border-radius: var(--radius);
+            color: var(--text-muted);
+            font-family: 'DM Sans', sans-serif;
+            font-size: 0.875rem;
+            font-weight: 500;
+            cursor: pointer;
+            transition: all var(--transition);
+            margin-bottom: 24px;
+        }
+
+        .calendar-btn:hover {
+            border-color: var(--accent);
+            color: var(--accent);
+            background: var(--accent-glow);
+        }
+
+        .calendar-btn svg {
+            width: 18px;
+            height: 18px;
+            flex-shrink: 0;
+        }
+
+        /* Form elements */
+        .field {
+            margin-bottom: 20px;
+        }
+
+        .field:last-child {
+            margin-bottom: 0;
+        }
+
+        label {
+            display: block;
+            font-size: 0.75rem;
+            font-weight: 600;
+            color: var(--text-muted);
+            text-transform: uppercase;
+            letter-spacing: 0.08em;
+            margin-bottom: 6px;
+        }
+
+        .label-row {
+            display: flex;
+            align-items: baseline;
+            justify-content: space-between;
+        }
+
+        .label-hint {
+            font-size: 0.7rem;
+            font-weight: 400;
+            color: var(--text-muted);
+            text-transform: none;
+            letter-spacing: normal;
+            opacity: 0.7;
+        }
+
+        input[type="text"],
+        select {
+            width: 100%;
+            padding: 11px 14px;
+            font-family: 'DM Sans', sans-serif;
+            font-size: 0.9375rem;
+            color: var(--text);
+            background: var(--input-bg);
+            border: 1.5px solid var(--input-border);
+            border-radius: var(--radius);
+            transition: all var(--transition);
+            appearance: none;
+            -webkit-appearance: none;
+        }
+
+        select {
+            background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' viewBox='0 0 24 24' fill='none' stroke='%238a7e6b' stroke-width='2.5' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpolyline points='6 9 12 15 18 9'/%3E%3C/svg%3E");
+            background-repeat: no-repeat;
+            background-position: right 14px center;
+            padding-right: 36px;
+        }
+
+        input[type="text"]:focus,
+        select:focus {
+            outline: none;
+            border-color: var(--input-focus);
+            box-shadow: 0 0 0 3px var(--accent-glow);
+        }
+
+        input[type="text"]::placeholder {
+            color: var(--text-muted);
+            opacity: 0.5;
+        }
+
+        .or-divider {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            margin: 12px 0;
+            font-size: 0.7rem;
+            font-weight: 600;
+            color: var(--text-muted);
+            text-transform: uppercase;
+            letter-spacing: 0.1em;
+            opacity: 0.5;
+        }
+
+        .or-divider::before,
+        .or-divider::after {
+            content: '';
+            flex: 1;
+            height: 1px;
+            background: var(--input-border);
+        }
+
+        /* Submit button */
+        .submit-btn {
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 8px;
+            width: 100%;
+            padding: 14px 24px;
+            background: var(--accent);
+            color: #fff;
+            border: none;
+            border-radius: var(--radius);
+            font-family: 'DM Sans', sans-serif;
+            font-size: 0.9375rem;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all var(--transition);
+            margin-top: 28px;
+            letter-spacing: 0.01em;
+        }
+
+        .submit-btn:hover {
+            background: var(--accent-hover);
+            transform: translateY(-1px);
+            box-shadow: 0 4px 16px rgba(200, 130, 42, 0.3);
+        }
+
+        .submit-btn:active {
+            transform: translateY(0);
+        }
+
+        /* Output section */
+        .output-card {
+            background: var(--card);
+            border: 1px solid var(--card-border);
+            border-radius: var(--radius-lg);
+            padding: 28px;
+            box-shadow: var(--shadow-lg);
+            margin-top: 16px;
+            animation: fadeUp 0.5s ease-out 0.1s both;
+        }
+
+        .output-section {
+            margin-bottom: 20px;
+        }
+
+        .output-section:last-child {
+            margin-bottom: 0;
+        }
+
+        .output-label {
+            display: flex;
+            align-items: center;
+            gap: 6px;
+            font-size: 0.7rem;
+            font-weight: 600;
+            color: var(--text-muted);
+            text-transform: uppercase;
+            letter-spacing: 0.08em;
+            margin-bottom: 8px;
+        }
+
+        .output-value {
+            position: relative;
+            background: var(--input-bg);
+            border: 1.5px solid var(--input-border);
+            border-radius: var(--radius);
+            padding: 14px 48px 14px 14px;
+            font-size: 0.85rem;
+            color: var(--text);
+            line-height: 1.5;
+            word-break: break-all;
+            min-height: 48px;
+            transition: all var(--transition);
+        }
+
+        .output-value:empty::before {
+            content: 'Will appear here...';
+            color: var(--text-muted);
+            opacity: 0.4;
+            font-style: italic;
+        }
+
+        .output-value.copied {
+            border-color: var(--success);
+            background: var(--success-bg);
+        }
+
+        .copy-btn {
+            position: absolute;
+            top: 50%;
+            right: 10px;
+            transform: translateY(-50%);
+            width: 32px;
+            height: 32px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            background: transparent;
+            border: 1.5px solid var(--input-border);
+            border-radius: 8px;
+            color: var(--text-muted);
+            cursor: pointer;
+            transition: all var(--transition);
+        }
+
+        .copy-btn:hover {
+            border-color: var(--accent);
+            color: var(--accent);
+            background: var(--accent-glow);
+        }
+
+        .copy-btn svg {
+            width: 15px;
+            height: 15px;
+        }
+
+        .copy-btn.copied {
+            border-color: var(--success);
+            color: var(--success);
+            background: var(--success-bg);
+        }
+
+        /* Toast notification */
+        .toast {
+            position: fixed;
+            bottom: 24px;
+            left: 50%;
+            transform: translateX(-50%) translateY(20px);
+            background: var(--text);
+            color: var(--card);
+            padding: 10px 20px;
+            border-radius: 100px;
+            font-size: 0.8rem;
+            font-weight: 500;
+            opacity: 0;
+            pointer-events: none;
+            transition: all 0.35s cubic-bezier(0.4, 0, 0.2, 1);
+            z-index: 100;
+            white-space: nowrap;
+        }
+
+        .toast.show {
+            opacity: 1;
+            transform: translateX(-50%) translateY(0);
+        }
+
+        /* Flatpickr overrides */
+        .flatpickr-calendar {
+            font-family: 'DM Sans', sans-serif !important;
+            border: 1px solid var(--card-border) !important;
+            box-shadow: var(--shadow-lg) !important;
+            border-radius: 12px !important;
+            overflow: hidden;
+        }
+
+        .flatpickr-day.selected,
+        .flatpickr-day.startRange,
+        .flatpickr-day.endRange {
+            background: var(--accent) !important;
+            border-color: var(--accent) !important;
+        }
+
+        .flatpickr-day.inRange {
+            background: var(--accent-glow) !important;
+            border-color: var(--accent-glow) !important;
+        }
+
+        .flatpickr-day:hover {
+            background: var(--accent-glow) !important;
+            border-color: var(--accent-glow) !important;
+        }
+
+        .flatpickr-months .flatpickr-month,
+        .flatpickr-current-month .flatpickr-monthDropdown-months,
+        .flatpickr-weekdays,
+        span.flatpickr-weekday {
+            background: var(--card) !important;
+            color: var(--text) !important;
+        }
+
+        /* Animations */
+        @keyframes fadeUp {
+            from {
+                opacity: 0;
+                transform: translateY(16px);
+            }
+            to {
+                opacity: 1;
+                transform: translateY(0);
+            }
+        }
+
+        @keyframes fadeDown {
+            from {
+                opacity: 0;
+                transform: translateY(-12px);
+            }
+            to {
+                opacity: 1;
+                transform: translateY(0);
+            }
+        }
+
+        @keyframes pulse {
+            0%, 100% { transform: translateY(-50%) scale(1); }
+            50% { transform: translateY(-50%) scale(1.15); }
+        }
+
+        /* Mobile refinements */
+        @media (max-width: 480px) {
+            body {
+                padding: 16px 12px 48px;
+            }
+
+            .header h1 {
+                font-size: 1.65rem;
+            }
+
+            .card {
+                padding: 24px 20px;
+                border-radius: 14px;
+            }
+
+            .output-card {
+                padding: 20px;
+                border-radius: 14px;
+            }
+        }
+
+        @media (min-width: 640px) {
+            body {
+                padding: 48px 24px 80px;
+            }
+
+            .header h1 {
+                font-size: 2.4rem;
+            }
+
+            .card {
+                padding: 36px 32px;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <header class="header">
+            <h1>Invoice Filename Generator</h1>
+            <p>Generate consistent filenames and email subjects</p>
+        </header>
+
+        <div class="card">
+            <button class="calendar-btn" id="authorize_button" onclick="loadInvoices()">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                    <rect x="3" y="4" width="18" height="18" rx="2" ry="2"/>
+                    <line x1="16" y1="2" x2="16" y2="6"/>
+                    <line x1="8" y1="2" x2="8" y2="6"/>
+                    <line x1="3" y1="10" x2="21" y2="10"/>
+                </svg>
+                Load Xero Invoices
+            </button>
+
+            <form onsubmit="generateFilename(event)" id="mainForm">
+                <div class="field">
+                    <label for="eventName">Invoice</label>
+                    <select id="eventName" name="eventName">
+                        <option value="">Select an event</option>
+                    </select>
+                    <div class="or-divider">or type manually</div>
+                    <input type="text" id="manualEventName" name="manualEventName" placeholder="Enter event name...">
+                </div>
+
+                <div class="field">
+                    <label for="hiringEntity">Hiring Entity</label>
+                    <input type="text" id="hiringEntity" name="hiringEntity" required placeholder="Company name">
+                </div>
+
+                <div class="field">
+                    <label for="jobReference">Job Reference #</label>
+                    <input type="text" id="jobReference" name="jobReference" placeholder="Optional">
+                </div>
+
+                <div class="field">
+                    <div class="label-row">
+                        <label for="dates">Date(s)</label>
+                        <span class="label-hint">Select multiple for non-consecutive shifts</span>
+                    </div>
+                    <input type="text" id="dates" name="dates" required readonly placeholder="Pick dates...">
+                </div>
+
+                <button type="submit" class="submit-btn">
+                    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+                        <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/>
+                        <polyline points="14 2 14 8 20 8"/>
+                        <line x1="16" y1="13" x2="8" y2="13"/>
+                        <line x1="16" y1="17" x2="8" y2="17"/>
+                    </svg>
+                    Generate Filename
+                </button>
+            </form>
+        </div>
+
+        <div class="output-card" id="outputCard" style="display: none;">
+            <div class="output-section">
+                <div class="output-label">
+                    <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+                        <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/>
+                        <polyline points="14 2 14 8 20 8"/>
+                    </svg>
+                    Filename
+                </div>
+                <div class="output-value" id="filenameOutput">
+                    <span id="filename"></span>
+                    <button class="copy-btn" onclick="copyToClipboard('filename', this)" title="Copy filename">
+                        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                            <rect x="9" y="9" width="13" height="13" rx="2" ry="2"/>
+                            <path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"/>
+                        </svg>
+                    </button>
+                </div>
+            </div>
+            <div class="output-section">
+                <div class="output-label">
+                    <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+                        <path d="M4 4h16c1.1 0 2 .9 2 2v12c0 1.1-.9 2-2 2H4c-1.1 0-2-.9-2-2V6c0-1.1.9-2 2-2z"/>
+                        <polyline points="22,6 12,13 2,6"/>
+                    </svg>
+                    Email Subject
+                </div>
+                <div class="output-value" id="emailSubjectOutput">
+                    <span id="emailSubject"></span>
+                    <button class="copy-btn" onclick="copyToClipboard('emailSubject', this)" title="Copy email subject">
+                        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                            <rect x="9" y="9" width="13" height="13" rx="2" ry="2"/>
+                            <path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"/>
+                        </svg>
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div class="toast" id="toast"></div>
+
     <script>
-        // OAuth token client (handled by Google Identity Services)
-        let tokenClient;
-        let gapiInited = false;
-        let gisInited = false;
-        const calendarId = 'd9cb698b39b472c6e2fff33371c0193592456c77e7b4f7d32fd823c2460c77c0@group.calendar.google.com'; // Replace with your actual Calendar ID
+        const WORKER_URL = 'https://xero-invoice-proxy.edweiss412.workers.dev';
 
-        /**
-         * Callback function for when GAPI is loaded.
-         * Initializes the GAPI client.
-         */
-        function gapiLoaded() {
-            console.log("GAPI loaded");
-            gapi.load('client', initializeGapiClient);
-        }
+        async function loadInvoices() {
+          const btn = document.getElementById('authorize_button');
 
-        /**
-         * Initializes the GAPI client with the necessary configurations.
-         */
-        async function initializeGapiClient() {
-            try {
-                await gapi.client.init({
-                    apiKey: 'AIzaSyBnyXIwJQ6v37a6hJdyBwreG8KHgWRtBjE',
-                    discoveryDocs: ["https://www.googleapis.com/discovery/v1/apis/calendar/v3/rest"],
-                });
-                gapiInited = true;
-                console.log("GAPI client initialized");
-                maybeEnableButtons();
-            } catch (error) {
-                console.error("Error initializing GAPI client:", error);
+          try {
+            const res = await fetch(`${WORKER_URL}/invoices`);
+
+            if (res.status === 401) {
+              window.location.href = `${WORKER_URL}/auth`;
+              return;
             }
+
+            if (!res.ok) throw new Error(`Failed to load invoices: ${res.status}`);
+
+            const data = await res.json();
+            populateInvoiceDropdown(data.invoices);
+
+            // Update button to show connected state
+            btn.textContent = '';
+            const checkSvg = document.createElementNS('http://www.w3.org/2000/svg', 'svg');
+            checkSvg.setAttribute('viewBox', '0 0 24 24');
+            checkSvg.setAttribute('fill', 'none');
+            checkSvg.setAttribute('stroke', 'currentColor');
+            checkSvg.setAttribute('stroke-width', '2.5');
+            checkSvg.setAttribute('stroke-linecap', 'round');
+            checkSvg.setAttribute('stroke-linejoin', 'round');
+            const polyline = document.createElementNS('http://www.w3.org/2000/svg', 'polyline');
+            polyline.setAttribute('points', '20 6 9 17 4 12');
+            checkSvg.appendChild(polyline);
+            btn.appendChild(checkSvg);
+            btn.appendChild(document.createTextNode(' Xero Connected'));
+            btn.style.borderColor = 'var(--success)';
+            btn.style.color = 'var(--success)';
+            btn.style.background = 'var(--success-bg)';
+          } catch (err) {
+            console.error('Error loading invoices:', err);
+            showToast('Failed to load invoices');
+          }
         }
 
-        /**
-         * Callback function for when Google Identity Services (GIS) is loaded.
-         * Initializes the token client.
-         */
-        function gisLoaded() {
-            console.log("GIS loaded");
-            tokenClient = google.accounts.oauth2.initTokenClient({
-                client_id: '917046122705-82881lq22cmdo67r46tqvbc5v1f8j7aa.apps.googleusercontent.com',
-                scope: 'https://www.googleapis.com/auth/calendar.readonly',
-                callback: handleCredentialResponse,
+        function populateInvoiceDropdown(invoices) {
+          const dropdown = document.getElementById('eventName');
+          while (dropdown.firstChild) dropdown.removeChild(dropdown.firstChild);
+
+          const defaultOpt = document.createElement('option');
+          defaultOpt.value = '';
+          defaultOpt.textContent = 'Select an invoice';
+          dropdown.appendChild(defaultOpt);
+
+          const groups = {
+            outstanding: { label: 'Outstanding', statuses: ['DRAFT', 'SUBMITTED', 'AUTHORISED'], items: [] },
+            paid: { label: 'Paid', statuses: ['PAID'], items: [] },
+          };
+
+          invoices.forEach(inv => {
+            for (const group of Object.values(groups)) {
+              if (group.statuses.includes(inv.status)) {
+                group.items.push(inv);
+                break;
+              }
+            }
+          });
+
+          for (const group of Object.values(groups)) {
+            if (group.items.length === 0) continue;
+            const optgroup = document.createElement('optgroup');
+            optgroup.label = group.label;
+            group.items.forEach(inv => {
+              const opt = document.createElement('option');
+              opt.value = JSON.stringify(inv);
+              const refPreview = inv.reference ? ` - ${inv.reference.substring(0, 40)}` : '';
+              opt.textContent = `${inv.invoiceNumber} - ${inv.contact}${refPreview}`;
+              optgroup.appendChild(opt);
             });
-            gisInited = true;
-            console.log("Token client initialized");
-            maybeEnableButtons();
+            dropdown.appendChild(optgroup);
+          }
         }
 
-        /**
-         * Enables the authorization button if both GAPI and GIS are initialized.
-         */
-        function maybeEnableButtons() {
-            if (gapiInited && gisInited) {
-                document.getElementById('authorize_button').style.visibility = 'visible';
-                console.log("Buttons enabled");
-            }
-        }
-
-        /**
-         * Handles the click event on the authorization button.
-         * Requests access token and lists upcoming events.
-         */
-        function handleAuthClick() {
-            console.log("Auth button clicked");
-            tokenClient.callback = async (resp) => {
-                if (resp.error) {
-                    console.error("Error in token client callback:", resp);
-                    return;
-                }
-                // Once we have the token, use GAPI to fetch events
-                await listUpcomingEvents();
-            };
-
-            // Request an access token using OAuth
-            if (gapi.client.getToken() === null) {
-                tokenClient.requestAccessToken({ prompt: 'consent' });
-            } else {
-                tokenClient.requestAccessToken({ prompt: '' });
-            }
-        }
-
-        /**
-         * Fetches and displays upcoming events from the Google Calendar.
-         */
-        async function listUpcomingEvents() {
-            let response;
-            try {
-                const currentDate = new Date();
-                const startDate = new Date(currentDate);
-                startDate.setMonth(currentDate.getMonth() - 1);
-                const endDate = new Date(currentDate);
-                endDate.setMonth(currentDate.getMonth() + 1);
-
-                const request = {
-                    'calendarId': calendarId,
-                    'timeMin': startDate.toISOString(),
-                    'timeMax': endDate.toISOString(),
-                    'showDeleted': false,
-                    'singleEvents': true,
-                    'orderBy': 'startTime',
-                };
-                response = await gapi.client.calendar.events.list(request);
-                console.log("Events fetched:", response);
-            } catch (err) {
-                console.error("Error fetching events:", err);
-                return;
-            }
-
-            const events = response.result.items;
-            if (!events || events.length === 0) {
-                console.log('No events found.');
-                return;
-            }
-
-            const eventDropdown = document.getElementById('eventName');
-            eventDropdown.innerHTML = '';  // Clear existing options
-
-            const pastEventsGroup = document.createElement('optgroup');
-            pastEventsGroup.label = "Completed";
-            const futureEventsGroup = document.createElement('optgroup');
-            futureEventsGroup.label = "Upcoming";
-
-            const now = new Date();
-            events.forEach(event => {
-                const option = document.createElement('option');
-                option.value = event.summary;
-                option.text = event.summary;
-                option.dataset.description = event.description || '';
-                option.dataset.startDate = event.start.dateTime || event.start.date;
-                option.dataset.endDate = event.end.dateTime || event.end.date;
-
-                const eventStart = new Date(event.start.dateTime || event.start.date);
-                if (eventStart < now) {
-                    pastEventsGroup.appendChild(option);
-                } else {
-                    futureEventsGroup.appendChild(option);
-                }
-            });
-
-            eventDropdown.appendChild(pastEventsGroup);
-            eventDropdown.appendChild(futureEventsGroup);
-        }
-
-        /**
-         * Handles the credential response from Google Identity Services.
-         * @param {Object} response - The credential response object.
-         */
-        function handleCredentialResponse(response) {
-            console.log("Encoded JWT ID token: " + response.credential);
-            // Here you would send the token to your backend to verify and exchange for session tokens
-            listUpcomingEvents();
-        }
-
-        /**
-         * Generates the filename based on the form inputs and copies it to the clipboard.
-         * @param {Event} event - The form submission event.
-         */
         function generateFilename(event) {
-            event.preventDefault(); // Prevent the form from submitting
+            event.preventDefault();
 
             let eventName = document.getElementById('eventName').value;
             const manualEventName = document.getElementById('manualEventName').value.trim();
             if (manualEventName) {
                 eventName = manualEventName;
             }
-            // Remove "Unconfirmed", "Confirmed", and "Day x/x" from the event name
             eventName = eventName.replace(/(Unconfirmed|Confirmed)/gi, '').replace(/Day \d+\/\d+/g, '').trim();
-            
+
             const hiringEntity = document.getElementById('hiringEntity').value;
             const jobReference = document.getElementById('jobReference').value.trim();
             const dates = document.getElementById('dates').value.split(', ');
@@ -216,8 +695,8 @@
                 for (let i = 1; i < sortedDates.length; i++) {
                     const currentDate = sortedDates[i];
                     const prevDate = sortedDates[i - 1];
-                    
-                    if (currentDate.date - prevDate.date === 86400000) { // 24 hours in milliseconds
+
+                    if (currentDate.date - prevDate.date === 86400000) {
                         rangeEnd = currentDate;
                     } else {
                         dateRanges.push(rangeStart === rangeEnd ? rangeStart.formatted : `${rangeStart.formatted}-${rangeEnd.formatted}`);
@@ -233,35 +712,22 @@
             }
             filename += '.PDF';
 
-            // Generate email subject
             const emailSubject = generateEmailSubject(jobReference, eventName, dates);
 
-            document.getElementById('filename').innerText = filename;
-            document.getElementById('emailSubject').innerText = emailSubject;
+            document.getElementById('filename').textContent = filename;
+            document.getElementById('emailSubject').textContent = emailSubject;
 
-            // Copy the filename to clipboard
-            navigator.clipboard.writeText(filename).then(() => {
-                console.log('Filename copied to clipboard');
-                // Optionally, you can show a temporary message to the user
-                const message = document.createElement('div');
-                message.textContent = 'Filename copied to clipboard!';
-                message.style.color = 'green';
-                message.style.marginTop = '10px';
-                document.getElementById('filename').after(message);
-                setTimeout(() => message.remove(), 3000); // Remove the message after 3 seconds
-            }).catch(err => {
-                console.error('Failed to copy filename: ', err);
-            });
+            // Show the output card
+            const outputCard = document.getElementById('outputCard');
+            outputCard.style.display = '';
+            outputCard.style.animation = 'none';
+            outputCard.offsetHeight; // trigger reflow
+            outputCard.style.animation = 'fadeUp 0.4s ease-out';
+
+            // Auto-copy filename
+            copyToClipboard('filename', document.querySelector('#filenameOutput .copy-btn'));
         }
 
-        /**
-         * Generates the email subject based on the form inputs.
-         * @param {string} jobReference - The job reference number.
-         * @param {string} eventName - The name of the event.
-         * @param {string} startDate - The start date of the event.
-         * @param {string} endDate - The end date of the event.
-         * @returns {string} The generated email subject.
-         */
         function generateEmailSubject(jobReference, eventName, dates) {
             const formatDateForSubject = (dateStr) => {
                 const [month, day, year] = dateStr.split('/');
@@ -269,13 +735,13 @@
             };
 
             let subject = `Eric Weiss - Invoice for Labor`;
-            
+
             if (jobReference.trim()) {
                 subject += ` - ${jobReference.trim()}`;
             }
-            
+
             subject += ` - ${eventName} - `;
-            
+
             if (dates.length > 0) {
                 const sortedDates = dates
                     .map(date => {
@@ -291,8 +757,8 @@
                 for (let i = 1; i < sortedDates.length; i++) {
                     const currentDate = sortedDates[i];
                     const prevDate = sortedDates[i - 1];
-                    
-                    if (currentDate.date - prevDate.date === 86400000) { // 24 hours in milliseconds
+
+                    if (currentDate.date - prevDate.date === 86400000) {
                         rangeEnd = currentDate;
                     } else {
                         dateRanges.push(rangeStart === rangeEnd ? rangeStart.formatted : `${rangeStart.formatted}-${rangeEnd.formatted}`);
@@ -308,144 +774,88 @@
             return subject;
         }
 
-        /**
-         * Populates form fields based on the selected event from the dropdown.
-         * @param {Event} event - The change event from the event dropdown.
-         */
-        function populateFieldsFromEvent(event) {
-            const selectedOption = event.target.selectedOptions[0];
-            const description = selectedOption.dataset.description;
-            const startDate = selectedOption.dataset.startDate;
-            const endDate = selectedOption.dataset.endDate;
+        function copyToClipboard(elementId, btnEl) {
+            const text = document.getElementById(elementId).textContent;
+            if (!text) return;
 
-            // Clear the manual event name input
-            document.getElementById('manualEventName').value = '';
+            navigator.clipboard.writeText(text).then(() => {
+                // Visual feedback on the button
+                btnEl.classList.add('copied');
+                // Replace button content with checkmark using DOM methods
+                while (btnEl.firstChild) btnEl.removeChild(btnEl.firstChild);
+                const svg = document.createElementNS('http://www.w3.org/2000/svg', 'svg');
+                svg.setAttribute('viewBox', '0 0 24 24');
+                svg.setAttribute('fill', 'none');
+                svg.setAttribute('stroke', 'currentColor');
+                svg.setAttribute('stroke-width', '2.5');
+                svg.setAttribute('stroke-linecap', 'round');
+                svg.setAttribute('stroke-linejoin', 'round');
+                const pl = document.createElementNS('http://www.w3.org/2000/svg', 'polyline');
+                pl.setAttribute('points', '20 6 9 17 4 12');
+                svg.appendChild(pl);
+                btnEl.appendChild(svg);
+                btnEl.style.animation = 'pulse 0.3s ease';
 
-            if (description) {
-                const hiringEntityMatch = description.match(/Hiring Entity: (.*)/);
-                if (hiringEntityMatch) {
-                    document.getElementById('hiringEntity').value = hiringEntityMatch[1];
-                }
-            }
+                // Parent output-value highlight
+                btnEl.parentElement.classList.add('copied');
 
-            if (startDate && endDate) {
-                const formattedStartDate = new Date(startDate).toLocaleDateString('en-US', {month: '2-digit', day: '2-digit', year: 'numeric'});
-                const formattedEndDate = new Date(endDate).toLocaleDateString('en-US', {month: '2-digit', day: '2-digit', year: 'numeric'});
-                document.getElementById('dates').value = `${formattedStartDate} to ${formattedEndDate}`;
-                flatpickr("#dates").setDate([new Date(startDate), new Date(endDate)]);
-            }
+                // Show toast
+                showToast('Copied to clipboard');
+
+                setTimeout(() => {
+                    btnEl.classList.remove('copied');
+                    btnEl.parentElement.classList.remove('copied');
+                    btnEl.style.animation = '';
+                    // Restore copy icon using DOM methods
+                    while (btnEl.firstChild) btnEl.removeChild(btnEl.firstChild);
+                    const restoreSvg = document.createElementNS('http://www.w3.org/2000/svg', 'svg');
+                    restoreSvg.setAttribute('viewBox', '0 0 24 24');
+                    restoreSvg.setAttribute('fill', 'none');
+                    restoreSvg.setAttribute('stroke', 'currentColor');
+                    restoreSvg.setAttribute('stroke-width', '2');
+                    restoreSvg.setAttribute('stroke-linecap', 'round');
+                    restoreSvg.setAttribute('stroke-linejoin', 'round');
+                    const rect = document.createElementNS('http://www.w3.org/2000/svg', 'rect');
+                    rect.setAttribute('x', '9');
+                    rect.setAttribute('y', '9');
+                    rect.setAttribute('width', '13');
+                    rect.setAttribute('height', '13');
+                    rect.setAttribute('rx', '2');
+                    rect.setAttribute('ry', '2');
+                    const path = document.createElementNS('http://www.w3.org/2000/svg', 'path');
+                    path.setAttribute('d', 'M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1');
+                    restoreSvg.appendChild(rect);
+                    restoreSvg.appendChild(path);
+                    btnEl.appendChild(restoreSvg);
+                }, 2000);
+            }).catch(err => {
+                console.error('Failed to copy: ', err);
+            });
+        }
+
+        function showToast(message) {
+            const toast = document.getElementById('toast');
+            toast.textContent = message;
+            toast.classList.add('show');
+            setTimeout(() => toast.classList.remove('show'), 2200);
         }
 
         window.onload = function() {
-            // Add event listener for manual event name input
             document.getElementById('manualEventName').addEventListener('input', function() {
                 if (this.value.trim() !== '') {
                     document.getElementById('eventName').value = '';
                 }
             });
-            document.getElementById('authorize_button').style.visibility = 'hidden';
-            console.log("Window loaded");
-            gapiLoaded();
-            gisLoaded();
 
-            document.getElementById('eventName').addEventListener('change', populateFieldsFromEvent);
+            document.getElementById('eventName').addEventListener('change', populateFieldsFromInvoice);
 
-            // Initialize Flatpickr
-            console.log("Initializing Flatpickr");
-            const fp = flatpickr("#dates", {
+            flatpickr("#dates", {
                 mode: "multiple",
                 dateFormat: "m/d/Y",
                 clickOpens: true,
                 disableMobile: "true",
-                onChange: function(selectedDates, dateStr, instance) {
-                    console.log("Dates selected:", dateStr);
-                }
             });
-            console.log("Flatpickr initialized:", fp);
-
-            // Fetch hiring entities
-            fetchHiringEntities();
         };
     </script>
-    <style>
-        body {
-            font-family: Arial, sans-serif;
-            margin: 20px;
-        }
-        h1 {
-            font-size: 24px;
-        }
-        label {
-            display: block;
-            margin-top: 10px;
-        }
-        input, select, button {
-            padding: 10px;
-            margin-top: 5px;
-            width: 100%;
-            box-sizing: border-box;
-            border: 1px solid #ccc;
-            border-radius: 4px;
-        }
-        input:focus, select:focus, button:focus {
-            outline: none;
-            border-color: #007BFF;
-        }
-        #filename {
-            margin-top: 20px;
-            font-weight: bold;
-            word-break: break-all;
-        }
-        @media (min-width: 600px) {
-            input, select, button {
-                width: 50%;
-            }
-        }
-        /* Custom styles for Flatpickr */
-        .flatpickr-calendar {
-            box-shadow: 0 3px 13px rgba(0,0,0,0.08);
-        }
-        .flatpickr-day.selected {
-            background: #007BFF;
-            border-color: #007BFF;
-        }
-        .flatpickr-day.inRange {
-            background: #E6F2FF;
-            border-color: #E6F2FF;
-        }
-    </style>
-    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/flatpickr/dist/flatpickr.min.css">
-</head>
-<body>
-    <h1>Invoice Filename Generator</h1>
-    <button id="authorize_button" onclick="handleAuthClick()">Load Google Calendar Events</button>
-    <form onsubmit="generateFilename(event)">
-        <label for="eventName">Event Name:</label>
-        <select id="eventName" name="eventName">
-            <option value="">Select an event</option>
-        </select>
-        <label for="manualEventName">Or enter event name manually:</label>
-        <input type="text" id="manualEventName" name="manualEventName"><br><br>
-        
-        <label for="hiringEntity">Hiring Entity:</label>
-        <input type="text" id="hiringEntity" name="hiringEntity" required><br><br>
-
-        <label for="jobReference">Job Reference #:</label>
-        <input type="text" id="jobReference" name="jobReference"><br><br>
-
-        <label for="dates">Date(s):</label>
-        <input type="text" id="dates" name="dates" required readonly>
-        <small>Select multiple dates for non-consecutive shifts</small><br><br>
-
-        <button type="submit">Generate Filename</button>
-    </form>
-    <h2>Generated Filename:</h2>
-    <p id="filename"></p>
-
-    <h2>Email Subject:</h2>
-    <p id="emailSubject"></p>
-
-    <script async defer src="https://apis.google.com/js/api.js" onload="gapiLoaded()"></script>
-    <script async defer src="https://accounts.google.com/gsi/client" onload="gisLoaded()"></script>
 </body>
 </html>
