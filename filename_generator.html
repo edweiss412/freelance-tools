@@ -791,6 +791,7 @@
             btn.style.borderColor = 'var(--success)';
             btn.style.color = 'var(--success)';
             btn.style.background = 'var(--success-bg)';
+            setTimeout(() => { btn.style.display = 'none'; }, 1500);
           } catch (err) {
             console.error('Error loading invoices:', err);
             if (!silent) showToast('Failed to load invoices');
@@ -1253,6 +1254,7 @@
                     btn.style.borderColor = 'var(--success)';
                     btn.style.color = 'var(--success)';
                     btn.style.background = 'var(--success-bg)';
+                    setTimeout(() => { btn.style.display = 'none'; }, 1500);
                 }
             } catch (err) {
                 console.error('Gmail status check failed:', err);
@@ -1298,9 +1300,17 @@
                 if (res.status === 401) {
                     const data = await res.json();
                     if (data.error === 'gmail_auth_required') {
+                        const gmailBtn = document.getElementById('gmail_connect_btn');
+                        gmailBtn.style.display = '';
+                        gmailBtn.textContent = 'Connect Gmail';
+                        gmailBtn.style.borderColor = '';
+                        gmailBtn.style.color = '';
+                        gmailBtn.style.background = '';
+                        gmailConnected = false;
                         showToast('Gmail session expired — reconnect');
                         return;
                     }
+                    document.getElementById('authorize_button').style.display = '';
                     showToast('Xero session expired — reload invoices');
                     return;
                 }
