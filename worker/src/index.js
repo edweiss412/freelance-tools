@@ -29,7 +29,7 @@ function handleAuth(env) {
     response_type: 'code',
     client_id: env.XERO_CLIENT_ID,
     redirect_uri: env.XERO_REDIRECT_URI,
-    scope: 'openid profile email accounting.transactions.read offline_access',
+    scope: 'openid accounting.invoices.read offline_access',
     state: crypto.randomUUID(),
   });
   return Response.redirect(`https://login.xero.com/identity/connect/authorize?${params}`, 302);
