@@ -615,14 +615,14 @@
         let selectedInvoiceId = null;
         let gmailConnected = false;
 
-        async function loadInvoices() {
+        async function loadInvoices({ silent = false } = {}) {
           const btn = document.getElementById('authorize_button');
 
           try {
-            const res = await fetch(`${WORKER_URL}/invoices`);
+            const res = await fetch(`${WORKER_URL}/invoices`, { credentials: 'include' });
 
             if (res.status === 401) {
-              window.location.href = `${WORKER_URL}/auth`;
+              if (!silent) window.location.href = `${WORKER_URL}/auth`;
               return;
             }
 
@@ -650,7 +650,7 @@
             btn.style.background = 'var(--success-bg)';
           } catch (err) {
             console.error('Error loading invoices:', err);
-            showToast('Failed to load invoices');
+            if (!silent) showToast('Failed to load invoices');
           }
         }
 
@@ -940,7 +940,7 @@
             setButtonLoading(btn, true);
 
             try {
-                const res = await fetch(`${WORKER_URL}/invoices/${selectedInvoiceId}/pdf`);
+                const res = await fetch(`${WORKER_URL}/invoices/${selectedInvoiceId}/pdf`, { credentials: 'include' });
 
                 if (res.status === 401) {
                     showToast('Session expired — reload invoices');
@@ -1088,7 +1088,7 @@
 
         async function checkGmailStatus() {
             try {
-                const res = await fetch(`${WORKER_URL}/gmail/status`);
+                const res = await fetch(`${WORKER_URL}/gmail/status`, { credentials: 'include' });
                 if (!res.ok) return;
                 const data = await res.json();
                 gmailConnected = data.connected;
@@ -1147,6 +1147,7 @@
 
                 const res = await fetch(`${WORKER_URL}/gmail/draft`, {
                     method: 'POST',
+                    credentials: 'include',
                     headers: { 'Content-Type': 'application/json' },
                     body: JSON.stringify({ invoiceId: selectedInvoiceId, subject, hiringEntity, filename }),
                 });
@@ -1210,6 +1211,7 @@
                 disableMobile: "true",
             });
 
+            loadInvoices({ silent: true });
             checkGmailStatus();
         };
     </script>
