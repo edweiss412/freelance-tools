@@ -3,13 +3,26 @@ export default {
     const url = new URL(request.url);
     const path = url.pathname;
 
-    // CORS preflight
+    // CORS preflight — always allow
     if (request.method === 'OPTIONS') {
       return new Response(null, { headers: corsHeaders(env) });
     }
 
-    if (path === '/auth') return handleAuth(env);
+    // Public routes (no auth required)
+    if (path === '/login') return handleLogin(request, env);
     if (path === '/callback') return handleCallback(url, env);
+    if (path === '/gmail/callback') return handleGmailCallback(url, env);
+
+    // All other routes require a valid session
+    if (!await verifySession(request, env)) {
+      return new Response(JSON.stringify({ error: 'auth_required' }), {
+        status: 401,
+        headers: { ...corsHeaders(env), 'Content-Type': 'application/json' },
+      });
+    }
+
+    // Authenticated routes
+    if (path === '/auth') return handleAuth(env);
     if (path === '/invoices') return handleInvoices(env);
 
     const pdfMatch = path.match(/^\/invoices\/([a-f0-9-]+)\/pdf$/i);
@@ -17,7 +30,6 @@ export default {
 
     // Gmail routes
     if (path === '/gmail/auth') return handleGmailAuth(env);
-    if (path === '/gmail/callback') return handleGmailCallback(url, env);
     if (path === '/gmail/status') return handleGmailStatus(env);
     if (path === '/gmail/draft' && request.method === 'POST') return handleGmailDraft(request, env);
 
@@ -30,7 +42,76 @@ function corsHeaders(env) {
     'Access-Control-Allow-Origin': env.ALLOWED_ORIGIN,
     'Access-Control-Allow-Methods': 'GET, POST, OPTIONS',
     'Access-Control-Allow-Headers': 'Content-Type',
+    'Access-Control-Allow-Credentials': 'true',
   };
+}
+
+// --- Auth helpers ---
+
+const THIRTY_DAYS = 30 * 24 * 60 * 60;
+
+async function hmacSign(data, secret) {
+  const key = await crypto.subtle.importKey(
+    'raw',
+    new TextEncoder().encode(secret),
+    { name: 'HMAC', hash: 'SHA-256' },
+    false,
+    ['sign'],
+  );
+  const sig = await crypto.subtle.sign('HMAC', key, new TextEncoder().encode(data));
+  return [...new Uint8Array(sig)].map(b => b.toString(16).padStart(2, '0')).join('');
+}
+
+async function createSessionCookie(env) {
+  const expiry = Math.floor(Date.now() / 1000) + THIRTY_DAYS;
+  const expiryHex = expiry.toString(16);
+  const signature = await hmacSign(expiryHex, env.AUTH_SECRET);
+  const value = `session=${expiryHex}.${signature}`;
+  return `${value}; HttpOnly; Secure; SameSite=None; Max-Age=${THIRTY_DAYS}; Path=/`;
+}
+
+async function verifySession(request, env) {
+  const cookieHeader = request.headers.get('Cookie') || '';
+  const match = cookieHeader.match(/(?:^|;\s*)session=([a-f0-9]+)\.([a-f0-9]+)/);
+  if (!match) return false;
+
+  const [, expiryHex, signature] = match;
+  const expectedSig = await hmacSign(expiryHex, env.AUTH_SECRET);
+  if (signature !== expectedSig) return false;
+
+  const expiry = parseInt(expiryHex, 16);
+  if (expiry < Math.floor(Date.now() / 1000)) return false;
+
+  return true;
+}
+
+async function handleLogin(request, env) {
+  const headers = corsHeaders(env);
+  const jsonHeaders = { ...headers, 'Content-Type': 'application/json' };
+
+  if (request.method !== 'POST') {
+    return new Response(JSON.stringify({ error: 'method_not_allowed' }), {
+      status: 405, headers: jsonHeaders,
+    });
+  }
+
+  try {
+    const { password } = await request.json();
+    if (password !== env.AUTH_PASSWORD) {
+      return new Response(JSON.stringify({ error: 'invalid_password' }), {
+        status: 401, headers: jsonHeaders,
+      });
+    }
+
+    const cookie = await createSessionCookie(env);
+    return new Response(JSON.stringify({ ok: true }), {
+      headers: { ...jsonHeaders, 'Set-Cookie': cookie },
+    });
+  } catch {
+    return new Response(JSON.stringify({ error: 'invalid_request' }), {
+      status: 400, headers: jsonHeaders,
+    });
+  }
 }
 
 function handleAuth(env) {
