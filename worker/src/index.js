@@ -76,4 +76,91 @@ async function handleCallback(url, env) {
 
   return Response.redirect(env.FRONTEND_URL, 302);
 }
-function handleInvoices(env, request) { return new Response('TODO'); }
+async function getValidToken(env) {
+  let accessToken = await env.TOKENS.get('access_token');
+  if (accessToken) return accessToken;
+
+  // Access token expired, refresh it
+  const refreshToken = await env.TOKENS.get('refresh_token');
+  if (!refreshToken) return null;
+
+  const res = await fetch('https://identity.xero.com/connect/token', {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/x-www-form-urlencoded',
+      'Authorization': 'Basic ' + btoa(`${env.XERO_CLIENT_ID}:${env.XERO_CLIENT_SECRET}`),
+    },
+    body: new URLSearchParams({
+      grant_type: 'refresh_token',
+      refresh_token: refreshToken,
+    }),
+  });
+
+  if (!res.ok) {
+    // Refresh token expired — need re-auth
+    await env.TOKENS.delete('refresh_token');
+    return null;
+  }
+
+  const tokens = await res.json();
+  await env.TOKENS.put('access_token', tokens.access_token, { expirationTtl: 1800 });
+  await env.TOKENS.put('refresh_token', tokens.refresh_token);
+  return tokens.access_token;
+}
+
+async function handleInvoices(env, request) {
+  const headers = corsHeaders(env);
+
+  const accessToken = await getValidToken(env);
+  if (!accessToken) {
+    return new Response(JSON.stringify({ error: 'auth_required' }), {
+      status: 401,
+      headers: { ...headers, 'Content-Type': 'application/json' },
+    });
+  }
+
+  const tenantId = await env.TOKENS.get('tenant_id');
+
+  const params = new URLSearchParams({
+    order: 'Date DESC',
+    page: '1',
+    statuses: 'DRAFT,SUBMITTED,AUTHORISED,PAID',
+  });
+
+  const res = await fetch(`https://api.xero.com/api.xro/2.0/Invoices?${params}`, {
+    headers: {
+      'Authorization': `Bearer ${accessToken}`,
+      'xero-tenant-id': tenantId,
+      'Accept': 'application/json',
+    },
+  });
+
+  if (!res.ok) {
+    const err = await res.text();
+    return new Response(JSON.stringify({ error: 'xero_error', details: err }), {
+      status: res.status,
+      headers: { ...headers, 'Content-Type': 'application/json' },
+    });
+  }
+
+  const data = await res.json();
+
+  // Return only the fields the frontend needs
+  const invoices = (data.Invoices || []).slice(0, 20).map(inv => ({
+    invoiceNumber: inv.InvoiceNumber,
+    reference: inv.Reference || '',
+    status: inv.Status,
+    contact: inv.Contact?.Name || '',
+    date: inv.Date,
+    lineItems: (inv.LineItems || []).map(li => ({
+      description: li.Description || '',
+      itemCode: li.ItemCode || '',
+      quantity: li.Quantity,
+      unitAmount: li.UnitAmount,
+    })),
+  }));
+
+  return new Response(JSON.stringify({ invoices }), {
+    headers: { ...headers, 'Content-Type': 'application/json' },
+  });
+}
