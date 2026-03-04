@@ -791,7 +791,11 @@
             btn.style.borderColor = 'var(--success)';
             btn.style.color = 'var(--success)';
             btn.style.background = 'var(--success-bg)';
-            setTimeout(() => { btn.style.display = 'none'; }, 1500);
+            if (silent) {
+              btn.style.display = 'none';
+            } else {
+              setTimeout(() => { btn.style.display = 'none'; }, 1500);
+            }
           } catch (err) {
             console.error('Error loading invoices:', err);
             if (!silent) showToast('Failed to load invoices');
@@ -1230,7 +1234,7 @@
             window.location.href = `${WORKER_URL}/gmail/auth`;
         }
 
-        async function checkGmailStatus() {
+        async function checkGmailStatus({ silent = false } = {}) {
             try {
                 const res = await fetch(`${WORKER_URL}/gmail/status`, { credentials: 'include' });
                 if (!res.ok) return;
@@ -1254,7 +1258,11 @@
                     btn.style.borderColor = 'var(--success)';
                     btn.style.color = 'var(--success)';
                     btn.style.background = 'var(--success-bg)';
-                    setTimeout(() => { btn.style.display = 'none'; }, 1500);
+                    if (silent) {
+                      btn.style.display = 'none';
+                    } else {
+                      setTimeout(() => { btn.style.display = 'none'; }, 1500);
+                    }
                 }
             } catch (err) {
                 console.error('Gmail status check failed:', err);
@@ -1365,7 +1373,7 @@
             });
 
             loadInvoices({ silent: true });
-            checkGmailStatus();
+            checkGmailStatus({ silent: true });
         };
     </script>
 </body>
