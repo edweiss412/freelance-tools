@@ -4,9 +4,9 @@ compatibility_date = "2024-09-23"
 
 [[kv_namespaces]]
 binding = "TOKENS"
-id = "placeholder"
+id = "fcaf6ceff05343c9b2b3a167b49917d9"
 
 [vars]
-ALLOWED_ORIGIN = "https://example.github.io"
-XERO_REDIRECT_URI = "https://xero-invoice-proxy.workers.dev/callback"
-FRONTEND_URL = "https://example.github.io/filename_generator.html"
+ALLOWED_ORIGIN = "https://edweiss412.github.io"
+XERO_REDIRECT_URI = "https://xero-invoice-proxy.edweiss412.workers.dev/callback"
+FRONTEND_URL = "https://edweiss412.github.io/freelance-tools/filename_generator.html"
