@@ -652,6 +652,108 @@
           }
         }
 
+        function parseReference(reference) {
+          let jobRef = '';
+          let eventName = reference;
+          let dates = [];
+
+          if (!reference) return { jobRef, eventName, dates };
+
+          // Extract leading job number: "27330 - DRW Holiday Party"
+          const jobMatch = eventName.match(/^(\d{4,6})\s*-\s*/);
+          if (jobMatch) {
+            jobRef = jobMatch[1];
+            eventName = eventName.slice(jobMatch[0].length);
+          }
+
+          // Extract trailing date patterns: "11/3 - 11/5" or "2/6/26 - 2/13/26"
+          const dateRangePattern = /\s*-?\s*(\d{1,2}\/\d{1,2}(?:\/\d{2,4})?)\s*-\s*(\d{1,2}\/\d{1,2}(?:\/\d{2,4})?)$/;
+          const dateRangeMatch = eventName.match(dateRangePattern);
+          if (dateRangeMatch) {
+            eventName = eventName.slice(0, dateRangeMatch.index).replace(/\s*-\s*$/, '');
+            dates = expandDateRange(dateRangeMatch[1], dateRangeMatch[2]);
+          }
+
+          return { jobRef, eventName: eventName.trim(), dates };
+        }
+
+        function expandDateRange(startStr, endStr) {
+          const currentYear = new Date().getFullYear();
+          const parseDate = (s) => {
+            const parts = s.split('/');
+            const month = parseInt(parts[0]) - 1;
+            const day = parseInt(parts[1]);
+            const year = parts[2] ? (parts[2].length === 2 ? 2000 + parseInt(parts[2]) : parseInt(parts[2])) : currentYear;
+            return new Date(year, month, day);
+          };
+
+          const start = parseDate(startStr);
+          const end = parseDate(endStr);
+          const dates = [];
+          const d = new Date(start);
+          while (d <= end) {
+            dates.push(new Date(d));
+            d.setDate(d.getDate() + 1);
+          }
+          return dates;
+        }
+
+        function extractDatesFromLineItems(lineItems) {
+          // Look at labor line items (day rate codes)
+          const laborCodes = ['001', '003', '005'];
+          const laborItem = lineItems.find(li => laborCodes.includes(li.itemCode));
+          if (!laborItem) return [];
+
+          const desc = laborItem.description;
+          // Match date patterns like "11/3/25" or "2/6/26"
+          const dateMatches = desc.match(/\d{1,2}\/\d{1,2}\/\d{2,4}/g);
+          if (!dateMatches) return [];
+
+          const currentYear = new Date().getFullYear();
+          return dateMatches.map(d => {
+            const [m, day, y] = d.split('/');
+            const year = y.length === 2 ? 2000 + parseInt(y) : parseInt(y);
+            return new Date(year, parseInt(m) - 1, parseInt(day));
+          });
+        }
+
+        function populateFieldsFromInvoice(event) {
+          const val = event.target.value;
+          if (!val) return;
+
+          let invoice;
+          try { invoice = JSON.parse(val); } catch { return; }
+
+          // Clear manual event name
+          document.getElementById('manualEventName').value = '';
+
+          // Hiring Entity = Contact
+          document.getElementById('hiringEntity').value = invoice.contact;
+
+          // Parse reference
+          const parsed = parseReference(invoice.reference);
+
+          // Job Reference
+          document.getElementById('jobReference').value = parsed.jobRef;
+
+          // Event Name — put parsed name in the manual field so it takes priority in generateFilename
+          document.getElementById('manualEventName').value = parsed.eventName;
+
+          // Dates — from reference or fallback to line items
+          let dates = parsed.dates;
+          if (dates.length === 0) {
+            dates = extractDatesFromLineItems(invoice.lineItems);
+          }
+
+          if (dates.length > 0) {
+            // Deduplicate dates
+            const unique = [...new Set(dates.map(d => d.getTime()))].map(t => new Date(t));
+            unique.sort((a, b) => a - b);
+            const fp = document.querySelector('#dates')._flatpickr;
+            fp.setDate(unique);
+          }
+        }
+
         function generateFilename(event) {
             event.preventDefault();
 
