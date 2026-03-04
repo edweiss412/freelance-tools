@@ -705,11 +705,17 @@
           if (!laborItem) return [];
 
           const desc = laborItem.description;
-          // Match date patterns like "11/3/25" or "2/6/26"
+
+          // Check for a date range like "2/6/26 - 2/13/26"
+          const rangeMatch = desc.match(/(\d{1,2}\/\d{1,2}\/\d{2,4})\s*-\s*(\d{1,2}\/\d{1,2}\/\d{2,4})/);
+          if (rangeMatch) {
+            return expandDateRange(rangeMatch[1], rangeMatch[2]);
+          }
+
+          // Otherwise collect individual dates
           const dateMatches = desc.match(/\d{1,2}\/\d{1,2}\/\d{2,4}/g);
           if (!dateMatches) return [];
 
-          const currentYear = new Date().getFullYear();
           return dateMatches.map(d => {
             const [m, day, y] = d.split('/');
             const year = y.length === 2 ? 2000 + parseInt(y) : parseInt(y);
