@@ -666,6 +666,15 @@
             eventName = eventName.slice(jobMatch[0].length);
           }
 
+          // Extract "Job #1234" or "Job 1234" anywhere: "DMP Orlando AbbVie Job 7714"
+          if (!jobRef) {
+            const jobWordMatch = eventName.match(/\bJob\s*#?\s*(\d+)/i);
+            if (jobWordMatch) {
+              jobRef = jobWordMatch[1];
+              eventName = eventName.replace(jobWordMatch[0], '').replace(/\s{2,}/g, ' ').trim();
+            }
+          }
+
           // Extract trailing date patterns: "11/3 - 11/5" or "2/6/26 - 2/13/26"
           const dateRangePattern = /\s*-?\s*(\d{1,2}\/\d{1,2}(?:\/\d{2,4})?)\s*-\s*(\d{1,2}\/\d{1,2}(?:\/\d{2,4})?)$/;
           const dateRangeMatch = eventName.match(dateRangePattern);
