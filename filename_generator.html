@@ -384,6 +384,89 @@
             transform: translateX(-50%) translateY(0);
         }
 
+        .login-overlay {
+            position: fixed;
+            inset: 0;
+            background: rgba(26, 24, 20, 0.85);
+            backdrop-filter: blur(4px);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            z-index: 1000;
+        }
+
+        .login-modal {
+            background: var(--card);
+            border: 1px solid var(--card-border);
+            border-radius: var(--radius-lg);
+            padding: 40px;
+            max-width: 360px;
+            width: 100%;
+            box-shadow: var(--shadow-lg);
+            text-align: center;
+        }
+
+        .login-modal h2 {
+            font-family: 'Instrument Serif', serif;
+            font-size: 1.5rem;
+            color: var(--text);
+            margin-bottom: 8px;
+        }
+
+        .login-modal p {
+            color: var(--text-muted);
+            font-size: 0.9rem;
+            margin-bottom: 20px;
+        }
+
+        .login-modal input {
+            width: 100%;
+            padding: 10px 14px;
+            border: 1.5px solid var(--input-border);
+            border-radius: var(--radius);
+            font-family: inherit;
+            font-size: 0.95rem;
+            background: var(--input-bg);
+            color: var(--text);
+            outline: none;
+            transition: border-color var(--transition);
+            margin-bottom: 12px;
+        }
+
+        .login-modal input:focus {
+            border-color: var(--input-focus);
+        }
+
+        .login-btn {
+            width: 100%;
+            padding: 10px;
+            background: var(--accent);
+            color: white;
+            border: none;
+            border-radius: var(--radius);
+            font-family: inherit;
+            font-size: 0.95rem;
+            font-weight: 500;
+            cursor: pointer;
+            transition: background var(--transition);
+        }
+
+        .login-btn:hover {
+            background: var(--accent-hover);
+        }
+
+        .login-btn:disabled {
+            opacity: 0.6;
+            cursor: not-allowed;
+        }
+
+        .login-error {
+            color: #c0392b;
+            font-size: 0.85rem;
+            margin-top: 10px;
+            min-height: 1.2em;
+        }
+
         /* Flatpickr overrides */
         .flatpickr-calendar {
             font-family: 'DM Sans', sans-serif !important;
@@ -610,10 +693,65 @@
 
     <div class="toast" id="toast"></div>
 
+    <div class="login-overlay" id="login_overlay" style="display:none">
+        <div class="login-modal">
+            <h2>Login Required</h2>
+            <p>Enter your password to continue.</p>
+            <form id="login_form" onsubmit="handleLoginSubmit(event)">
+                <input type="password" id="login_password" placeholder="Password" autocomplete="current-password" required>
+                <button type="submit" class="login-btn" id="login_btn">Login</button>
+                <p class="login-error" id="login_error"></p>
+            </form>
+        </div>
+    </div>
+
     <script>
         const WORKER_URL = 'https://xero-invoice-proxy.edweiss412.workers.dev';
         let selectedInvoiceId = null;
         let gmailConnected = false;
+        let needsAuth = false;
+
+        async function handleLoginSubmit(event) {
+            event.preventDefault();
+            const btn = document.getElementById('login_btn');
+            const errorEl = document.getElementById('login_error');
+            const password = document.getElementById('login_password').value;
+
+            btn.disabled = true;
+            errorEl.textContent = '';
+
+            try {
+                const res = await fetch(`${WORKER_URL}/login`, {
+                    method: 'POST',
+                    credentials: 'include',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ password }),
+                });
+
+                if (!res.ok) {
+                    errorEl.textContent = 'Wrong password';
+                    btn.disabled = false;
+                    return;
+                }
+
+                document.getElementById('login_overlay').style.display = 'none';
+                document.getElementById('login_password').value = '';
+                needsAuth = false;
+
+                loadInvoices({ silent: true });
+                checkGmailStatus();
+            } catch (err) {
+                errorEl.textContent = 'Connection error';
+                btn.disabled = false;
+            }
+        }
+
+        function showLoginModal() {
+            if (needsAuth) return;
+            needsAuth = true;
+            document.getElementById('login_overlay').style.display = 'flex';
+            document.getElementById('login_password').focus();
+        }
 
         async function loadInvoices({ silent = false } = {}) {
           const btn = document.getElementById('authorize_button');
@@ -622,7 +760,12 @@
             const res = await fetch(`${WORKER_URL}/invoices`, { credentials: 'include' });
 
             if (res.status === 401) {
-              if (!silent) window.location.href = `${WORKER_URL}/auth`;
+              const data = await res.json().catch(() => ({}));
+              if (data.error === 'auth_required') {
+                showLoginModal();
+              } else if (!silent) {
+                window.location.href = `${WORKER_URL}/auth`;
+              }
               return;
             }
 
