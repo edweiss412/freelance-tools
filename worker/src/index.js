@@ -10,7 +10,7 @@ export default {
 
     if (path === '/auth') return handleAuth(env);
     if (path === '/callback') return handleCallback(url, env);
-    if (path === '/invoices') return handleInvoices(env, request);
+    if (path === '/invoices') return handleInvoices(env);
 
     return new Response('Not found', { status: 404 });
   }
@@ -76,6 +76,7 @@ async function handleCallback(url, env) {
 
   return Response.redirect(env.FRONTEND_URL, 302);
 }
+
 async function getValidToken(env) {
   let accessToken = await env.TOKENS.get('access_token');
   if (accessToken) return accessToken;
@@ -108,7 +109,7 @@ async function getValidToken(env) {
   return tokens.access_token;
 }
 
-async function handleInvoices(env, request) {
+async function handleInvoices(env) {
   const headers = corsHeaders(env);
 
   const accessToken = await getValidToken(env);
