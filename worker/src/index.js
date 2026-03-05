@@ -31,8 +31,7 @@ export default {
     // Gmail routes
     if (path === '/gmail/auth') return handleGmailAuth(env);
     if (path === '/gmail/status') return handleGmailStatus(env);
-    if (path === '/gmail/draft' && request.method === 'POST') return handleGmailDraft(request, env);
-    if (path === '/gmail/recipient' && request.method === 'GET') return handleGmailRecipient(url, env);
+if (path === '/gmail/recipient' && request.method === 'GET') return handleGmailRecipient(url, env);
     if (path === '/xero/contact-timezone' && request.method === 'GET') return handleContactTimezone(url, env);
 
     const variationMatch = path.match(/^\/variation\/([a-f0-9-]+)$/i);
@@ -471,103 +470,6 @@ async function handleGmailStatus(env) {
   });
 }
 
-// --- Gmail Draft Creation ---
-
-async function handleGmailDraft(request, env) {
-  const headers = corsHeaders(env);
-  const jsonHeaders = { ...headers, 'Content-Type': 'application/json' };
-
-  try {
-    const { invoiceId, subject, hiringEntity, filename } = await request.json();
-
-    if (!invoiceId || !subject || !filename) {
-      return new Response(JSON.stringify({ error: 'Missing required fields: invoiceId, subject, filename' }), {
-        status: 400, headers: jsonHeaders,
-      });
-    }
-
-    // Validate invoiceId is a UUID
-    if (!/^[a-f0-9-]+$/i.test(invoiceId)) {
-      return new Response(JSON.stringify({ error: 'Invalid invoiceId' }), {
-        status: 400, headers: jsonHeaders,
-      });
-    }
-
-    // Get Gmail token
-    const gmailToken = await getValidGmailToken(env);
-    if (!gmailToken) {
-      return new Response(JSON.stringify({ error: 'gmail_auth_required' }), {
-        status: 401, headers: jsonHeaders,
-      });
-    }
-
-    // Get Xero token
-    const xeroToken = await getValidToken(env);
-    if (!xeroToken) {
-      return new Response(JSON.stringify({ error: 'xero_auth_required' }), {
-        status: 401, headers: jsonHeaders,
-      });
-    }
-
-    // Fetch invoice PDF from Xero
-    const tenantId = await env.TOKENS.get('tenant_id');
-    const pdfRes = await fetch(`https://api.xero.com/api.xro/2.0/Invoices/${invoiceId}`, {
-      headers: {
-        'Authorization': `Bearer ${xeroToken}`,
-        'xero-tenant-id': tenantId,
-        'Accept': 'application/pdf',
-      },
-    });
-
-    if (!pdfRes.ok) {
-      return new Response(JSON.stringify({ error: 'pdf_fetch_failed', details: await pdfRes.text() }), {
-        status: 500, headers: jsonHeaders,
-      });
-    }
-
-    const pdfBytes = await pdfRes.arrayBuffer();
-
-    // Find last recipient
-    const to = await findLastRecipient(gmailToken, hiringEntity);
-
-    // Build MIME message
-    const body = `Good Morning!\n\nI've attached my invoice for this one. Let me know if there's any issues in processing.\n\nThanks!\n\nEric`;
-    const mimeMessage = buildMimeMessage({ to: to || '', subject, body, pdfBytes, pdfFilename: filename });
-
-    // Base64url encode the MIME message
-    const rawMessage = base64url(mimeMessage);
-
-    // Create draft via Gmail API
-    const draftRes = await fetch('https://gmail.googleapis.com/gmail/v1/users/me/drafts', {
-      method: 'POST',
-      headers: {
-        'Authorization': `Bearer ${gmailToken}`,
-        'Content-Type': 'application/json',
-      },
-      body: JSON.stringify({ message: { raw: rawMessage } }),
-    });
-
-    if (!draftRes.ok) {
-      const err = await draftRes.text();
-      return new Response(JSON.stringify({ error: 'draft_creation_failed', details: err }), {
-        status: 500, headers: jsonHeaders,
-      });
-    }
-
-    const draft = await draftRes.json();
-    return new Response(JSON.stringify({
-      draftId: draft.id,
-      messageId: draft.message.id,
-      draftUrl: `https://mail.google.com/mail/u/0/#drafts/${draft.message.id}`,
-    }), {
-      headers: jsonHeaders,
-    });
-  } catch (err) {
-    return new Response(JSON.stringify({ error: 'internal_error', details: err.message }), {
-      status: 500, headers: jsonHeaders,
-    });
-  }
-}
 
 async function handleGmailSend(request, env) {
   const headers = corsHeaders(env);
