@@ -976,6 +976,27 @@
           }
         }
 
+        function collapseDateRanges(sortedDates) {
+            if (sortedDates.length === 0) return [];
+
+            const ranges = [];
+            let rangeStart = sortedDates[0];
+            let rangeEnd = sortedDates[0];
+
+            for (let i = 1; i < sortedDates.length; i++) {
+                const diff = Math.round((sortedDates[i].date - sortedDates[i - 1].date) / 86400000);
+                if (diff === 1) {
+                    rangeEnd = sortedDates[i];
+                } else {
+                    ranges.push(rangeStart === rangeEnd ? rangeStart.formatted : `${rangeStart.formatted}-${rangeEnd.formatted}`);
+                    rangeStart = sortedDates[i];
+                    rangeEnd = sortedDates[i];
+                }
+            }
+            ranges.push(rangeStart === rangeEnd ? rangeStart.formatted : `${rangeStart.formatted}-${rangeEnd.formatted}`);
+            return ranges;
+        }
+
         function generateFilename(event) {
             event.preventDefault();
 
@@ -1014,25 +1035,7 @@
                     })
                     .sort((a, b) => a.date - b.date);
 
-                const dateRanges = [];
-                let rangeStart = sortedDates[0];
-                let rangeEnd = sortedDates[0];
-
-                for (let i = 1; i < sortedDates.length; i++) {
-                    const currentDate = sortedDates[i];
-                    const prevDate = sortedDates[i - 1];
-
-                    const diff = Math.round((currentDate.date - prevDate.date) / 86400000);
-                    if (diff === 1) {
-                        rangeEnd = currentDate;
-                    } else {
-                        dateRanges.push(rangeStart === rangeEnd ? rangeStart.formatted : `${rangeStart.formatted}-${rangeEnd.formatted}`);
-                        rangeStart = currentDate;
-                        rangeEnd = currentDate;
-                    }
-                }
-                dateRanges.push(rangeStart === rangeEnd ? rangeStart.formatted : `${rangeStart.formatted}-${rangeEnd.formatted}`);
-
+                const dateRanges = collapseDateRanges(sortedDates);
                 if (dateRanges.length > 0) {
                     filename += ` - ${dateRanges.join('_')}`;
                 }
@@ -1160,25 +1163,7 @@
                     })
                     .sort((a, b) => a.date - b.date);
 
-                const dateRanges = [];
-                let rangeStart = sortedDates[0];
-                let rangeEnd = sortedDates[0];
-
-                for (let i = 1; i < sortedDates.length; i++) {
-                    const currentDate = sortedDates[i];
-                    const prevDate = sortedDates[i - 1];
-
-                    const diff = Math.round((currentDate.date - prevDate.date) / 86400000);
-                    if (diff === 1) {
-                        rangeEnd = currentDate;
-                    } else {
-                        dateRanges.push(rangeStart === rangeEnd ? rangeStart.formatted : `${rangeStart.formatted}-${rangeEnd.formatted}`);
-                        rangeStart = currentDate;
-                        rangeEnd = currentDate;
-                    }
-                }
-                dateRanges.push(rangeStart === rangeEnd ? rangeStart.formatted : `${rangeStart.formatted}-${rangeEnd.formatted}`);
-
+                const dateRanges = collapseDateRanges(sortedDates);
                 subject += dateRanges.join(', ');
             }
 
