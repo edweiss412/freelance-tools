@@ -917,6 +917,87 @@
             }
         }
 
+        /* Invalid field state */
+        input[type="text"].invalid,
+        select.invalid,
+        .booking-trigger.invalid {
+            border-color: #dc2626;
+            background: #fef2f2;
+        }
+
+        input[type="text"].invalid:focus,
+        select.invalid:focus {
+            border-color: #dc2626;
+            box-shadow: 0 0 0 3px rgba(220, 38, 38, 0.1);
+        }
+
+        .field-error {
+            font-size: 0.7rem;
+            color: #dc2626;
+            margin-top: 4px;
+            display: none;
+        }
+
+        .field-error.show {
+            display: block;
+        }
+
+        /* Clear button */
+        .clear-btn {
+            background: none;
+            border: none;
+            font-family: 'DM Sans', sans-serif;
+            font-size: 0.75rem;
+            font-weight: 500;
+            color: var(--text-muted);
+            cursor: pointer;
+            padding: 2px 0;
+            transition: color var(--transition);
+            margin-left: auto;
+        }
+
+        .clear-btn:hover {
+            color: var(--accent);
+        }
+
+        /* Booking picker keyboard focus */
+        .booking-item.focused {
+            background: var(--accent-glow);
+        }
+
+        /* Manual override hint */
+        .manual-override-note {
+            font-size: 0.7rem;
+            color: var(--accent);
+            font-weight: 500;
+            margin-top: 4px;
+            display: none;
+        }
+
+        .manual-override-note.show {
+            display: block;
+        }
+
+        /* De-emphasized manual input when booking is selected */
+        .manual-field-wrapper.de-emphasized input {
+            opacity: 0.6;
+        }
+
+        .manual-field-wrapper.de-emphasized input:focus {
+            opacity: 1;
+        }
+
+        /* Connecting state spinner */
+        .status-item .status-dot.connecting {
+            background: var(--accent);
+            animation: pulse-dot 1s ease infinite;
+        }
+
+        @keyframes pulse-dot {
+            0%, 100% { opacity: 1; }
+            50% { opacity: 0.3; }
+        }
+
         /* Mobile refinements */
         @media (max-width: 480px) {
             body {
@@ -971,6 +1052,7 @@
                     <span class="status-dot"></span>
                     <span class="status-label">Connect Gmail</span>
                 </div>
+                <button type="button" class="clear-btn" onclick="clearAll()">Clear</button>
             </div>
 
             <div class="error-banner" id="errorBanner">
@@ -993,14 +1075,18 @@
                         <span class="booking-trigger-text"><span class="bt-label">Select a booking</span></span>
                         <svg class="booking-trigger-arrow" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="6 9 12 15 18 9"/></svg>
                     </button>
-                    <div class="or-divider">or enter details manually</div>
-                    <input type="text" id="manualEventName" name="manualEventName" placeholder="Enter booking name...">
+                    <div class="or-divider" id="orDivider">or enter details manually</div>
+                    <div class="manual-field-wrapper" id="manualFieldWrapper">
+                        <input type="text" id="manualEventName" name="manualEventName" placeholder="Enter booking name...">
+                        <span class="manual-override-note" id="manualOverrideNote">Overriding booking name</span>
+                    </div>
                     <p class="field-hint">Selecting a booking above auto-fills all fields. Typing here overrides only the booking name.</p>
                 </div>
 
                 <div class="field">
                     <label for="hiringEntity">Hiring Entity</label>
                     <input type="text" id="hiringEntity" name="hiringEntity" required placeholder="Company name">
+                    <span class="field-error" id="hiringEntityError">Hiring entity is required</span>
                 </div>
 
                 <div class="field">
@@ -1014,6 +1100,7 @@
                         <span class="label-hint">Select multiple for non-consecutive shifts</span>
                     </div>
                     <input type="text" id="dates" name="dates" required readonly placeholder="Pick dates...">
+                    <span class="field-error" id="datesError">At least one date is required</span>
                 </div>
 
                 <button type="submit" class="submit-btn">
@@ -1122,6 +1209,26 @@
             document.getElementById('errorBanner').classList.remove('show');
         }
 
+        function clearAll() {
+            document.getElementById('manualEventName').value = '';
+            document.getElementById('hiringEntity').value = '';
+            document.getElementById('jobReference').value = '';
+            const fp = document.querySelector('#dates')._flatpickr;
+            if (fp) fp.clear();
+            document.getElementById('eventName').value = '';
+            selectedInvoiceId = null;
+            resetBookingTrigger();
+            document.getElementById('outputCard').style.display = 'none';
+            // Clear validation states
+            document.querySelectorAll('.invalid').forEach(el => el.classList.remove('invalid'));
+            document.querySelectorAll('.field-error').forEach(el => el.classList.remove('show'));
+            // Reset manual field wrapper state
+            document.getElementById('manualFieldWrapper').classList.remove('de-emphasized');
+            document.getElementById('manualOverrideNote').classList.remove('show');
+            document.getElementById('manualEventName').placeholder = 'Enter booking name...';
+            dismissError();
+        }
+
         function togglePassword() {
             const input = document.getElementById('login_password');
             const icon = document.getElementById('eye_icon');
@@ -1193,7 +1300,10 @@
 
         async function loadInvoices({ silent = false } = {}) {
           try {
-            const res = await fetch(`${WORKER_URL}/invoices`, { credentials: 'include' });
+            const controller = new AbortController();
+            const timeoutId = setTimeout(() => controller.abort(), 10000);
+            const res = await fetch(`${WORKER_URL}/invoices`, { credentials: 'include', signal: controller.signal });
+            clearTimeout(timeoutId);
 
             if (res.status === 401) {
               const data = await res.json().catch(() => ({}));
@@ -1208,6 +1318,7 @@
                 dd.disabled = false;
                 dd.querySelector('option').textContent = 'Select a booking';
                 resetBookingTrigger();
+                showToast('Redirecting to Xero...');
                 window.location.href = `${WORKER_URL}/auth`;
               }
               return;
@@ -1223,6 +1334,7 @@
             const xeroStatus = document.getElementById('xero_status');
             xeroStatus.classList.remove('disconnected');
             xeroStatus.classList.add('connected');
+            xeroStatus.querySelector('.status-dot').classList.remove('connecting');
             xeroStatus.querySelector('.status-label').textContent = 'Xero';
             xeroStatus.onclick = null;
           } catch (err) {
@@ -1230,8 +1342,24 @@
             const dd = document.getElementById('eventName');
             dd.disabled = false;
             dd.querySelector('option').textContent = 'Select a booking';
-            resetBookingTrigger();
-            if (!silent) showError('Failed to load bookings. Check your connection and try again.');
+            // Show retry state on booking trigger
+            const trigger = document.getElementById('bookingTrigger');
+            trigger.classList.remove('disabled');
+            const textEl = trigger.querySelector('.booking-trigger-text');
+            while (textEl.firstChild) textEl.removeChild(textEl.firstChild);
+            const retryLabel = document.createElement('span');
+            retryLabel.className = 'bt-label';
+            retryLabel.style.color = '#dc2626';
+            retryLabel.textContent = err.name === 'AbortError' ? 'Timed out — tap to retry' : 'Failed to load — tap to retry';
+            textEl.appendChild(retryLabel);
+            trigger.onclick = function() { trigger.onclick = openBookingPicker; loadInvoices(); };
+            // Reset connecting state
+            const xeroStatus = document.getElementById('xero_status');
+            xeroStatus.querySelector('.status-dot').classList.remove('connecting');
+            if (xeroStatus.classList.contains('disconnected')) {
+                xeroStatus.querySelector('.status-label').textContent = 'Connect Xero';
+            }
+            if (!silent) showError(err.name === 'AbortError' ? 'Loading bookings timed out. Tap the booking field to retry.' : 'Failed to load bookings. Check your connection and try again.');
           }
         }
 
@@ -1275,9 +1403,12 @@
           // Populate custom booking picker
           populateBookingList(groups);
           resetBookingTrigger();
+          // Show or-divider only when Xero is connected (bookings available)
+          document.getElementById('orDivider').style.display = '';
         }
 
         let bookingInvoiceGroups = null;
+        let bookingFocusedIndex = -1;
 
         function populateBookingList(groups) {
           bookingInvoiceGroups = groups;
@@ -1361,6 +1492,7 @@
           document.getElementById('bookingOverlay').classList.add('open');
           document.getElementById('bookingSheet').classList.add('open');
           document.body.style.overflow = 'hidden';
+          bookingFocusedIndex = -1;
           const search = document.getElementById('bookingSearch');
           search.value = '';
           if (bookingInvoiceGroups) renderBookingList(bookingInvoiceGroups, '');
@@ -1375,11 +1507,28 @@
 
         document.addEventListener('keydown', function(e) {
           if (e.key === 'Escape') closeBookingPicker();
+          const sheet = document.getElementById('bookingSheet');
+          if (!sheet.classList.contains('open')) return;
+          const items = getBookingItems();
+          if (items.length === 0) return;
+          if (e.key === 'ArrowDown') {
+            e.preventDefault();
+            bookingFocusedIndex = Math.min(bookingFocusedIndex + 1, items.length - 1);
+            updateBookingFocus();
+          } else if (e.key === 'ArrowUp') {
+            e.preventDefault();
+            bookingFocusedIndex = Math.max(bookingFocusedIndex - 1, 0);
+            updateBookingFocus();
+          } else if (e.key === 'Enter' && bookingFocusedIndex >= 0) {
+            e.preventDefault();
+            items[bookingFocusedIndex].click();
+          }
         });
 
-        // Swipe-to-dismiss for mobile bottom sheet
-        (function() {
+        // Swipe-to-dismiss for mobile bottom sheet (deferred until DOM ready)
+        document.addEventListener('DOMContentLoaded', function() {
           const sheet = document.getElementById('bookingSheet');
+          if (!sheet) return;
           const handle = sheet.querySelector('.booking-sheet-handle');
           const header = sheet.querySelector('.booking-sheet-header');
           let startY = 0, currentY = 0, dragging = false;
@@ -1413,7 +1562,7 @@
           header.addEventListener('touchstart', onStart, { passive: true });
           document.addEventListener('touchmove', onMove, { passive: true });
           document.addEventListener('touchend', onEnd);
-        })();
+        });
 
         function selectBooking(inv) {
           const dropdown = document.getElementById('eventName');
@@ -1439,22 +1588,50 @@
             textEl.appendChild(detail);
           }
 
+          // De-emphasize manual input and change placeholder
+          const wrapper = document.getElementById('manualFieldWrapper');
+          wrapper.classList.add('de-emphasized');
+          document.getElementById('manualEventName').placeholder = 'Override booking name';
+          document.getElementById('manualOverrideNote').classList.remove('show');
+
           closeBookingPicker();
         }
 
         function filterBookings(query) {
+          bookingFocusedIndex = -1;
           if (bookingInvoiceGroups) renderBookingList(bookingInvoiceGroups, query);
+        }
+
+        function getBookingItems() {
+          return Array.from(document.querySelectorAll('#bookingList .booking-item'));
+        }
+
+        function updateBookingFocus() {
+          const items = getBookingItems();
+          items.forEach((item, i) => {
+            item.classList.toggle('focused', i === bookingFocusedIndex);
+          });
+          if (bookingFocusedIndex >= 0 && items[bookingFocusedIndex]) {
+            items[bookingFocusedIndex].scrollIntoView({ block: 'nearest' });
+          }
         }
 
         function resetBookingTrigger() {
           const trigger = document.getElementById('bookingTrigger');
           trigger.classList.remove('disabled');
+          trigger.onclick = openBookingPicker;
           const textEl = trigger.querySelector('.booking-trigger-text');
           while (textEl.firstChild) textEl.removeChild(textEl.firstChild);
           const label = document.createElement('span');
           label.className = 'bt-label';
           label.textContent = 'Select a booking';
           textEl.appendChild(label);
+          // Reset manual field state
+          const wrapper = document.getElementById('manualFieldWrapper');
+          if (wrapper) {
+            wrapper.classList.remove('de-emphasized');
+            document.getElementById('manualEventName').placeholder = 'Enter booking name...';
+          }
         }
 
         function parseReference(reference) {
@@ -1601,6 +1778,23 @@
         function generateFilename(event) {
             event.preventDefault();
 
+            // Field-level validation
+            let valid = true;
+            const hiringEntityInput = document.getElementById('hiringEntity');
+            const datesInput = document.getElementById('dates');
+
+            if (!hiringEntityInput.value.trim()) {
+                hiringEntityInput.classList.add('invalid');
+                document.getElementById('hiringEntityError').classList.add('show');
+                valid = false;
+            }
+            if (!datesInput.value.trim()) {
+                datesInput.classList.add('invalid');
+                document.getElementById('datesError').classList.add('show');
+                valid = false;
+            }
+            if (!valid) return;
+
             let eventName = document.getElementById('eventName').value;
             const manualEventName = document.getElementById('manualEventName').value.trim();
             if (manualEventName) {
@@ -1610,7 +1804,7 @@
             if (!eventName) eventName = 'Event';
             const sanitize = str => str.replace(/[\/\\?*"<>|:]/g, '-');
 
-            const hiringEntity = document.getElementById('hiringEntity').value;
+            const hiringEntity = hiringEntityInput.value;
             const jobReference = document.getElementById('jobReference').value.trim();
             const dates = document.getElementById('dates').value.split(', ').filter(d => d.trim());
 
@@ -1670,6 +1864,11 @@
 
             const draftEmailBtn = document.getElementById('draftEmailBtn');
             draftEmailBtn.style.display = (selectedInvoiceId && gmailConnected) ? '' : 'none';
+
+            // Scroll output into view after animation starts
+            setTimeout(() => {
+                outputCard.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+            }, 150);
 
             // Auto-copy filename
             copyToClipboard('filenameOutput', document.querySelector('#filenameOutput .copy-btn'));
@@ -1864,10 +2063,16 @@
         }
 
         function handleXeroClick() {
+            const xeroStatus = document.getElementById('xero_status');
+            xeroStatus.querySelector('.status-label').textContent = 'Connecting...';
+            xeroStatus.querySelector('.status-dot').classList.add('connecting');
             loadInvoices();
         }
 
         function handleGmailClick() {
+            const gmailStatus = document.getElementById('gmail_status');
+            gmailStatus.querySelector('.status-label').textContent = 'Connecting...';
+            gmailStatus.querySelector('.status-dot').classList.add('connecting');
             window.location.href = `${WORKER_URL}/gmail/auth`;
         }
 
@@ -1984,19 +2189,52 @@
                 if (this.value.trim() !== '') {
                     document.getElementById('eventName').value = '';
                     selectedInvoiceId = null;
+                    document.getElementById('manualOverrideNote').classList.add('show');
+                } else {
+                    document.getElementById('manualOverrideNote').classList.remove('show');
                 }
             });
 
             document.getElementById('eventName').addEventListener('change', populateFieldsFromInvoice);
+
+            // Clear validation on input
+            document.getElementById('hiringEntity').addEventListener('input', function() {
+                this.classList.remove('invalid');
+                document.getElementById('hiringEntityError').classList.remove('show');
+            });
+            document.getElementById('dates').addEventListener('change', function() {
+                this.classList.remove('invalid');
+                document.getElementById('datesError').classList.remove('show');
+            });
 
             flatpickr("#dates", {
                 mode: "multiple",
                 dateFormat: "m/d/Y",
                 clickOpens: true,
                 disableMobile: "true",
+                onChange: function() {
+                    document.getElementById('dates').classList.remove('invalid');
+                    document.getElementById('datesError').classList.remove('show');
+                },
+            });
+
+            // Harden contenteditable outputs — paste plain text only
+            document.querySelectorAll('.output-value[contenteditable]').forEach(el => {
+                el.addEventListener('paste', function(e) {
+                    e.preventDefault();
+                    const text = e.clipboardData.getData('text/plain');
+                    const selection = window.getSelection();
+                    if (!selection.rangeCount) return;
+                    selection.deleteFromDocument();
+                    selection.getRangeAt(0).insertNode(document.createTextNode(text));
+                    selection.collapseToEnd();
+                });
             });
 
             const dropdown = document.getElementById('eventName');
+            // Hide or-divider until Xero is connected
+            document.getElementById('orDivider').style.display = 'none';
+
             dropdown.disabled = true;
             dropdown.querySelector('option').textContent = 'Loading bookings...';
             const trigger = document.getElementById('bookingTrigger');
