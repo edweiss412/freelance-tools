@@ -345,6 +345,31 @@
             background: var(--success-bg);
         }
 
+        .output-value[contenteditable] {
+            cursor: text;
+            outline: none;
+        }
+
+        .output-value[contenteditable]:focus {
+            border-color: var(--input-focus);
+            box-shadow: 0 0 0 3px var(--accent-glow);
+        }
+
+        .output-edited {
+            display: none;
+            font-size: 0.65rem;
+            font-weight: 600;
+            color: var(--text-muted);
+            text-transform: uppercase;
+            letter-spacing: 0.06em;
+            opacity: 0.6;
+            margin-left: auto;
+        }
+
+        .output-edited.show {
+            display: inline;
+        }
+
         .copy-btn {
             position: absolute;
             top: 50%;
@@ -718,10 +743,10 @@
                         <polyline points="14 2 14 8 20 8"/>
                     </svg>
                     Filename
+                    <span class="output-edited" id="filenameEdited">edited</span>
                 </div>
-                <div class="output-value" id="filenameOutput">
-                    <span id="filename"></span>
-                    <button class="copy-btn" onclick="copyToClipboard('filename', this)" title="Copy filename">
+                <div class="output-value" id="filenameOutput" contenteditable="true" data-original="">
+                    <button class="copy-btn" onclick="copyToClipboard('filenameOutput', this)" title="Copy filename">
                         <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
                             <rect x="9" y="9" width="13" height="13" rx="2" ry="2"/>
                             <path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"/>
@@ -736,10 +761,10 @@
                         <polyline points="22,6 12,13 2,6"/>
                     </svg>
                     Email Subject
+                    <span class="output-edited" id="emailSubjectEdited">edited</span>
                 </div>
-                <div class="output-value" id="emailSubjectOutput">
-                    <span id="emailSubject"></span>
-                    <button class="copy-btn" onclick="copyToClipboard('emailSubject', this)" title="Copy email subject">
+                <div class="output-value" id="emailSubjectOutput" contenteditable="true" data-original="">
+                    <button class="copy-btn" onclick="copyToClipboard('emailSubjectOutput', this)" title="Copy email subject">
                         <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
                             <rect x="9" y="9" width="13" height="13" rx="2" ry="2"/>
                             <path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"/>
@@ -1104,8 +1129,17 @@
 
             const emailSubject = generateEmailSubject(jobReference, eventName, dates);
 
-            document.getElementById('filename').textContent = filename;
-            document.getElementById('emailSubject').textContent = emailSubject;
+            const filenameEl = document.getElementById('filenameOutput');
+            const emailEl = document.getElementById('emailSubjectOutput');
+
+            setOutputText(filenameEl, filename);
+            setOutputText(emailEl, emailSubject);
+
+            filenameEl.dataset.original = filename;
+            emailEl.dataset.original = emailSubject;
+
+            document.getElementById('filenameEdited').classList.remove('show');
+            document.getElementById('emailSubjectEdited').classList.remove('show');
 
             // Show the output card
             const outputCard = document.getElementById('outputCard');
@@ -1122,7 +1156,7 @@
             draftEmailBtn.style.display = (selectedInvoiceId && gmailConnected) ? '' : 'none';
 
             // Auto-copy filename
-            copyToClipboard('filename', document.querySelector('#filenameOutput .copy-btn'));
+            copyToClipboard('filenameOutput', document.querySelector('#filenameOutput .copy-btn'));
         }
 
         function setButtonLoading(btn, loading) {
@@ -1180,7 +1214,7 @@
                 if (!res.ok) throw new Error(`PDF fetch failed: ${res.status}`);
 
                 const blob = await res.blob();
-                const filename = document.getElementById('filename').textContent;
+                const filename = getOutputText(document.getElementById('filenameOutput'));
                 const url = URL.createObjectURL(blob);
                 const a = document.createElement('a');
                 a.href = url;
@@ -1230,8 +1264,25 @@
             return subject;
         }
 
-        function copyToClipboard(elementId, btnEl) {
-            const text = document.getElementById(elementId).textContent;
+        function setOutputText(el, text) {
+            const copyBtn = el.querySelector('.copy-btn');
+            Array.from(el.childNodes).forEach(node => {
+                if (node !== copyBtn) el.removeChild(node);
+            });
+            el.insertBefore(document.createTextNode(text), copyBtn);
+        }
+
+        function getOutputText(el) {
+            let text = '';
+            el.childNodes.forEach(node => {
+                if (node.nodeType === Node.TEXT_NODE) text += node.textContent;
+            });
+            return text.trim();
+        }
+
+        function copyToClipboard(outputId, btnEl) {
+            const el = document.getElementById(outputId);
+            const text = getOutputText(el);
             if (!text) return;
 
             navigator.clipboard.writeText(text).then(() => {
@@ -1348,8 +1399,8 @@
             btn.appendChild(document.createTextNode(' Creating draft...'));
 
             try {
-                const subject = document.getElementById('emailSubject').textContent;
-                const filename = document.getElementById('filename').textContent;
+                const subject = getOutputText(document.getElementById('emailSubjectOutput'));
+                const filename = getOutputText(document.getElementById('filenameOutput'));
                 const hiringEntity = document.getElementById('hiringEntity').value;
 
                 const res = await fetch(`${WORKER_URL}/gmail/draft`, {
@@ -1432,6 +1483,22 @@
             const dropdown = document.getElementById('eventName');
             dropdown.disabled = true;
             dropdown.querySelector('option').textContent = 'Loading bookings...';
+
+            document.getElementById('filenameOutput').addEventListener('input', function() {
+                const edited = getOutputText(this) !== this.dataset.original;
+                document.getElementById('filenameEdited').classList.toggle('show', edited);
+            });
+
+            document.getElementById('emailSubjectOutput').addEventListener('input', function() {
+                const edited = getOutputText(this) !== this.dataset.original;
+                document.getElementById('emailSubjectEdited').classList.toggle('show', edited);
+            });
+
+            document.querySelectorAll('.output-value[contenteditable]').forEach(el => {
+                el.addEventListener('keydown', function(e) {
+                    if (e.key === 'Enter') e.preventDefault();
+                });
+            });
 
             loadInvoices({ silent: true });
             checkGmailStatus({ silent: true });
