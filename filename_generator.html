@@ -2175,6 +2175,7 @@
 
           // Hiring Entity = Contact
           document.getElementById('hiringEntity').value = invoice.contact;
+          composeState.contactId = invoice.contactId || null;
 
           // Parse reference
           const parsed = parseReference(invoice.reference);

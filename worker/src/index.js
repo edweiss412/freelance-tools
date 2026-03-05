@@ -336,6 +336,7 @@ async function handleInvoices(env) {
     reference: inv.Reference || '',
     status: inv.Status,
     contact: inv.Contact?.Name || '',
+    contactId: inv.Contact?.ContactID || '',
     date: inv.Date,
     lineItems: (inv.LineItems || []).map(li => ({
       description: li.Description || '',
