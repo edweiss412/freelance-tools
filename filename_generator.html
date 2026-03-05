@@ -374,6 +374,228 @@
             -webkit-overflow-scrolling: touch;
         }
 
+        /* Compose sheet (slides up over output sheet) */
+        .compose-overlay {
+            position: fixed;
+            inset: 0;
+            background: rgba(0, 0, 0, 0.5);
+            z-index: 2000;
+            opacity: 0;
+            visibility: hidden;
+            transition: opacity 0.25s ease, visibility 0.25s ease;
+        }
+
+        .compose-overlay.open {
+            opacity: 1;
+            visibility: visible;
+        }
+
+        .compose-sheet {
+            position: fixed;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            z-index: 2001;
+            background: var(--card);
+            border-radius: 20px 20px 0 0;
+            max-height: 92vh;
+            display: flex;
+            flex-direction: column;
+            transform: translateY(100%);
+            transition: transform 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+            box-shadow: 0 -8px 40px rgba(0, 0, 0, 0.15);
+            pointer-events: none;
+        }
+
+        .compose-sheet.open {
+            transform: translateY(0);
+            pointer-events: auto;
+        }
+
+        .compose-sheet-handle {
+            width: 36px;
+            height: 4px;
+            background: var(--input-border);
+            border-radius: 2px;
+            margin: 12px auto 4px;
+            flex-shrink: 0;
+        }
+
+        .compose-sheet-header {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            padding: 12px 24px 0;
+            flex-shrink: 0;
+        }
+
+        .compose-sheet-title {
+            font-family: 'Instrument Serif', serif;
+            font-size: 1.35rem;
+            color: var(--text);
+        }
+
+        .compose-sheet-close {
+            background: none;
+            border: none;
+            color: var(--text-muted);
+            cursor: pointer;
+            padding: 4px;
+            border-radius: 6px;
+            transition: all var(--transition);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+
+        .compose-sheet-close:hover {
+            color: var(--text);
+            background: var(--accent-glow);
+        }
+
+        .compose-sheet-body {
+            flex: 1;
+            overflow-y: auto;
+            padding: 16px 24px 24px;
+            -webkit-overflow-scrolling: touch;
+        }
+
+        .compose-field {
+            margin-bottom: 16px;
+        }
+
+        .compose-label {
+            font-size: 0.7rem;
+            font-weight: 600;
+            text-transform: uppercase;
+            letter-spacing: 0.05em;
+            color: var(--text-muted);
+            margin-bottom: 6px;
+        }
+
+        .compose-input {
+            width: 100%;
+            padding: 10px 14px;
+            border: 1.5px solid var(--input-border);
+            border-radius: 10px;
+            font-size: 0.85rem;
+            font-family: 'DM Sans', sans-serif;
+            background: var(--bg);
+            color: var(--text);
+            outline: none;
+            transition: border-color var(--transition);
+            box-sizing: border-box;
+        }
+
+        .compose-input:focus {
+            border-color: var(--accent);
+        }
+
+        .compose-textarea {
+            min-height: 100px;
+            resize: vertical;
+            line-height: 1.5;
+        }
+
+        .compose-attachment {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            padding: 10px 14px;
+            background: var(--accent-glow);
+            border-radius: 10px;
+            font-size: 0.8rem;
+            color: var(--text-muted);
+        }
+
+        .compose-attachment svg {
+            flex-shrink: 0;
+        }
+
+        .variation-cards {
+            display: flex;
+            gap: 8px;
+            overflow-x: auto;
+            padding-bottom: 4px;
+            -webkit-overflow-scrolling: touch;
+        }
+
+        .variation-card {
+            flex: 0 0 auto;
+            width: 140px;
+            padding: 10px 12px;
+            border: 1.5px solid var(--input-border);
+            border-radius: 10px;
+            font-size: 0.72rem;
+            line-height: 1.4;
+            color: var(--text-muted);
+            background: var(--bg);
+            cursor: pointer;
+            transition: all var(--transition);
+            display: -webkit-box;
+            -webkit-line-clamp: 3;
+            -webkit-box-orient: vertical;
+            overflow: hidden;
+        }
+
+        .variation-card:hover, .variation-card.active {
+            border-color: var(--accent);
+            color: var(--text);
+        }
+
+        .schedule-bar {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            padding: 10px 14px;
+            background: var(--bg);
+            border: 1.5px solid var(--input-border);
+            border-radius: 10px;
+            font-size: 0.8rem;
+            color: var(--text);
+        }
+
+        .schedule-bar svg {
+            flex-shrink: 0;
+            color: var(--text-muted);
+        }
+
+        .schedule-datetime {
+            cursor: pointer;
+            border-bottom: 1px dashed var(--text-muted);
+            padding-bottom: 1px;
+        }
+
+        .schedule-tz {
+            cursor: pointer;
+            border-bottom: 1px dashed var(--text-muted);
+            padding-bottom: 1px;
+            color: var(--text-muted);
+            font-size: 0.72rem;
+            font-weight: 600;
+            text-transform: uppercase;
+        }
+
+        .compose-actions {
+            display: flex;
+            gap: 10px;
+            margin-top: 8px;
+        }
+
+        .compose-actions .submit-btn {
+            flex: 1;
+        }
+
+        .btn-schedule {
+            background: var(--bg);
+            color: var(--text);
+            border: 1.5px solid var(--input-border);
+        }
+
+        .btn-schedule:hover {
+            border-color: var(--accent);
+        }
+
         .output-section {
             margin-bottom: 20px;
         }
@@ -1268,13 +1490,82 @@
                 </svg>
                 Download Renamed PDF
             </button>
-            <button class="submit-btn download-btn" id="draftEmailBtn" style="display: none;" onclick="draftInvoiceEmail()">
+            <button class="submit-btn download-btn" id="draftEmailBtn" style="display: none;" onclick="openComposeEmail()">
                 <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
                     <path d="M4 4h16c1.1 0 2 .9 2 2v12c0 1.1-.9 2-2 2H4c-1.1 0-2-.9-2-2V6c0-1.1.9-2 2-2z"/>
                     <polyline points="22,6 12,13 2,6"/>
                 </svg>
-                Draft Invoice Email
+                Compose Invoice Email
             </button>
+        </div>
+    </div>
+
+    <!-- Compose email sheet -->
+    <div class="compose-overlay" id="composeOverlay" onclick="closeComposeSheet()"></div>
+    <div class="compose-sheet" id="composeSheet">
+        <div class="compose-sheet-handle"></div>
+        <div class="compose-sheet-header">
+            <div class="compose-sheet-title">Send Invoice</div>
+            <button class="compose-sheet-close" onclick="closeComposeSheet()" title="Close">
+                <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+                    <line x1="18" y1="6" x2="6" y2="18"/>
+                    <line x1="6" y1="6" x2="18" y2="18"/>
+                </svg>
+            </button>
+        </div>
+        <div class="compose-sheet-body">
+            <div class="compose-field">
+                <div class="compose-label">To</div>
+                <input type="email" class="compose-input" id="composeTo" placeholder="recipient@example.com">
+            </div>
+            <div class="compose-field">
+                <div class="compose-label">Subject</div>
+                <input type="text" class="compose-input" id="composeSubject">
+            </div>
+            <div class="compose-field">
+                <div class="compose-label">Message</div>
+                <textarea class="compose-input compose-textarea" id="composeBody"></textarea>
+            </div>
+            <div class="compose-field">
+                <div class="compose-label">Alternatives</div>
+                <div class="variation-cards" id="variationCards"></div>
+            </div>
+            <div class="compose-field">
+                <div class="compose-label">Attachment</div>
+                <div class="compose-attachment" id="composeAttachment">
+                    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+                        <path d="M21.44 11.05l-9.19 9.19a6 6 0 0 1-8.49-8.49l9.19-9.19a4 4 0 0 1 5.66 5.66l-9.2 9.19a2 2 0 0 1-2.83-2.83l8.49-8.48"/>
+                    </svg>
+                    <span id="composeFilename"></span>
+                </div>
+            </div>
+            <div class="compose-field">
+                <div class="compose-label">Schedule</div>
+                <div class="schedule-bar" id="scheduleBar">
+                    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+                        <circle cx="12" cy="12" r="10"/>
+                        <polyline points="12 6 12 12 16 14"/>
+                    </svg>
+                    <span class="schedule-datetime" id="scheduleDatetime" onclick="openSchedulePicker()"></span>
+                    <span class="schedule-tz" id="scheduleTz" onclick="openTzPicker()"></span>
+                </div>
+            </div>
+            <div class="compose-actions">
+                <button class="submit-btn" onclick="sendInvoiceEmail(false)">
+                    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+                        <line x1="22" y1="2" x2="11" y2="13"/>
+                        <polygon points="22 2 15 22 11 13 2 9 22 2"/>
+                    </svg>
+                    Send Now
+                </button>
+                <button class="submit-btn btn-schedule" onclick="sendInvoiceEmail(true)">
+                    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+                        <circle cx="12" cy="12" r="10"/>
+                        <polyline points="12 6 12 12 16 14"/>
+                    </svg>
+                    Schedule Send
+                </button>
+            </div>
         </div>
     </div>
 
@@ -1304,6 +1595,21 @@
         let selectedInvoiceId = null;
         let gmailConnected = false;
         let needsAuth = false;
+
+        const MESSAGE_VARIATIONS = [
+            "Good morning! I've attached my invoice for this one. Let me know if there are any issues in processing. Thanks!\n\nEric",
+            "Hi there \u2014 invoice is attached for your review. Please don't hesitate to reach out with any questions. Thank you!\n\nEric",
+            "Morning! Attached is my invoice for this booking. Feel free to reach out if anything needs adjusting. Thanks so much!\n\nEric",
+            "Hi! Invoice attached for this one. Let me know if you need anything else from my end. Thanks!\n\nEric",
+        ];
+
+        let composeState = {
+            contactId: null,
+            selectedVariation: 0,
+            timezone: 'America/Chicago',
+            tzLabel: 'CT',
+            scheduledAt: null,
+        };
 
         function showError(message) {
             const banner = document.getElementById('errorBanner');
@@ -2238,97 +2544,210 @@
             }
         }
 
-        async function draftInvoiceEmail() {
-            if (!selectedInvoiceId) return;
+        function openComposeSheet() {
+            document.getElementById('composeOverlay').classList.add('open');
+            document.getElementById('composeSheet').classList.add('open');
+        }
 
-            const btn = document.getElementById('draftEmailBtn');
-            btn.disabled = true;
+        function closeComposeSheet() {
+            document.getElementById('composeOverlay').classList.remove('open');
+            document.getElementById('composeSheet').classList.remove('open');
+        }
 
-            // Show loading state
-            while (btn.firstChild) btn.removeChild(btn.firstChild);
-            const spinSvg = document.createElementNS('http://www.w3.org/2000/svg', 'svg');
-            spinSvg.setAttribute('width', '16');
-            spinSvg.setAttribute('height', '16');
-            spinSvg.setAttribute('viewBox', '0 0 24 24');
-            spinSvg.setAttribute('fill', 'none');
-            spinSvg.setAttribute('stroke', 'currentColor');
-            spinSvg.setAttribute('stroke-width', '2.5');
-            spinSvg.setAttribute('stroke-linecap', 'round');
-            spinSvg.setAttribute('stroke-linejoin', 'round');
-            spinSvg.style.animation = 'spin 1s linear infinite';
-            const spinPath = document.createElementNS('http://www.w3.org/2000/svg', 'path');
-            spinPath.setAttribute('d', 'M21 12a9 9 0 1 1-6.219-8.56');
-            spinSvg.appendChild(spinPath);
-            btn.appendChild(spinSvg);
-            btn.appendChild(document.createTextNode(' Creating draft...'));
+        async function openComposeEmail() {
+            const subject = getOutputText(document.getElementById('emailSubjectOutput'));
+            const filename = getOutputText(document.getElementById('filenameOutput'));
+
+            document.getElementById('composeSubject').value = subject;
+            document.getElementById('composeFilename').textContent = filename;
+            document.getElementById('composeTo').value = '';
+            document.getElementById('composeBody').value = '';
+
+            // Default variation while loading
+            selectVariation(null);
+            setDefaultSchedule();
+            openComposeSheet();
+
+            // Fetch recipient, timezone, and variation in parallel
+            try {
+                const recipientRes = await fetch(`${WORKER_URL}/gmail/recipient?invoiceId=${selectedInvoiceId}`, { credentials: 'include' });
+                if (recipientRes.ok) {
+                    const data = await recipientRes.json();
+                    document.getElementById('composeTo').value = data.email || '';
+                    composeState.contactId = data.contactId;
+
+                    // Now fetch timezone and variation with actual contactId
+                    const [tzRes, varRes] = await Promise.all([
+                        fetch(`${WORKER_URL}/xero/contact-timezone?contactId=${data.contactId}`, { credentials: 'include' }),
+                        fetch(`${WORKER_URL}/variation/${data.contactId}`, { credentials: 'include' }),
+                    ]);
+
+                    if (tzRes.ok) {
+                        const tzData = await tzRes.json();
+                        composeState.timezone = tzData.timezone;
+                        composeState.tzLabel = tzData.label;
+                        setDefaultSchedule(); // refresh with correct timezone
+                    }
+
+                    if (varRes.ok) {
+                        const varData = await varRes.json();
+                        selectVariation(varData.lastIndex);
+                    }
+                }
+            } catch (err) {
+                console.error('Error loading compose data:', err);
+            }
+        }
+
+        function selectVariation(lastIndex) {
+            let available = MESSAGE_VARIATIONS.map((_, i) => i);
+            if (lastIndex !== null && lastIndex !== undefined) {
+                available = available.filter(i => i !== lastIndex);
+            }
+            const picked = available[Math.floor(Math.random() * available.length)];
+            composeState.selectedVariation = picked;
+            document.getElementById('composeBody').value = MESSAGE_VARIATIONS[picked];
+            renderVariationCards(picked);
+        }
+
+        function renderVariationCards(activeIndex) {
+            const container = document.getElementById('variationCards');
+            while (container.firstChild) container.removeChild(container.firstChild);
+            MESSAGE_VARIATIONS.forEach((msg, i) => {
+                const card = document.createElement('div');
+                card.className = 'variation-card' + (i === activeIndex ? ' active' : '');
+                card.textContent = msg.split('\n')[0];
+                card.addEventListener('click', () => {
+                    composeState.selectedVariation = i;
+                    document.getElementById('composeBody').value = MESSAGE_VARIATIONS[i];
+                    container.querySelectorAll('.variation-card').forEach((c, j) => {
+                        c.classList.toggle('active', j === i);
+                    });
+                });
+                container.appendChild(card);
+            });
+        }
+
+        function setDefaultSchedule() {
+            const tomorrow = new Date();
+            tomorrow.setDate(tomorrow.getDate() + 1);
+            const yyyy = tomorrow.getFullYear();
+            const mm = String(tomorrow.getMonth() + 1).padStart(2, '0');
+            const dd = String(tomorrow.getDate()).padStart(2, '0');
+            composeState.scheduledAt = `${yyyy}-${mm}-${dd}T08:00:00`;
+            updateScheduleDisplay();
+        }
+
+        function updateScheduleDisplay() {
+            const dt = new Date(composeState.scheduledAt);
+            const opts = { month: 'short', day: 'numeric', hour: 'numeric', minute: '2-digit', hour12: true };
+            document.getElementById('scheduleDatetime').textContent = dt.toLocaleDateString('en-US', opts);
+            document.getElementById('scheduleTz').textContent = composeState.tzLabel;
+        }
+
+        function openSchedulePicker() {
+            const input = document.createElement('input');
+            input.type = 'datetime-local';
+            input.value = composeState.scheduledAt.slice(0, 16);
+            input.style.position = 'fixed';
+            input.style.opacity = '0';
+            input.style.pointerEvents = 'none';
+            document.body.appendChild(input);
+            input.showPicker();
+            input.addEventListener('change', () => {
+                composeState.scheduledAt = input.value + ':00';
+                updateScheduleDisplay();
+                input.remove();
+            });
+            input.addEventListener('blur', () => {
+                setTimeout(() => input.remove(), 200);
+            });
+        }
+
+        function openTzPicker() {
+            const tzOptions = [
+                { tz: 'America/New_York', label: 'ET' },
+                { tz: 'America/Chicago', label: 'CT' },
+                { tz: 'America/Denver', label: 'MT' },
+                { tz: 'America/Los_Angeles', label: 'PT' },
+            ];
+            const currentIdx = tzOptions.findIndex(t => t.tz === composeState.timezone);
+            const nextIdx = (currentIdx + 1) % tzOptions.length;
+            composeState.timezone = tzOptions[nextIdx].tz;
+            composeState.tzLabel = tzOptions[nextIdx].label;
+            updateScheduleDisplay();
+        }
+
+        async function sendInvoiceEmail(scheduled) {
+            const to = document.getElementById('composeTo').value.trim();
+            const subject = document.getElementById('composeSubject').value.trim();
+            const body = document.getElementById('composeBody').value.trim();
+            const filename = document.getElementById('composeFilename').textContent.trim();
+
+            if (!to || !subject || !body) {
+                showError('Please fill in To, Subject, and Message.');
+                return;
+            }
+
+            const buttons = document.querySelectorAll('.compose-actions .submit-btn');
+            buttons.forEach(b => b.disabled = true);
 
             try {
-                const subject = getOutputText(document.getElementById('emailSubjectOutput'));
-                const filename = getOutputText(document.getElementById('filenameOutput'));
-                const hiringEntity = document.getElementById('hiringEntity').value;
+                const payload = {
+                    invoiceId: selectedInvoiceId,
+                    to,
+                    subject,
+                    body,
+                    filename,
+                };
 
-                const res = await fetch(`${WORKER_URL}/gmail/draft`, {
+                if (scheduled && composeState.scheduledAt) {
+                    payload.scheduledAt = composeState.scheduledAt;
+                }
+
+                const res = await fetch(`${WORKER_URL}/gmail/send`, {
                     method: 'POST',
                     credentials: 'include',
                     headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({ invoiceId: selectedInvoiceId, subject, hiringEntity, filename }),
+                    body: JSON.stringify(payload),
                 });
 
                 if (res.status === 401) {
                     const data = await res.json();
                     if (data.error === 'gmail_auth_required') {
-                        const gmailStatus = document.getElementById('gmail_status');
-                        gmailStatus.classList.remove('connected');
-                        gmailStatus.classList.add('disconnected');
-                        gmailStatus.querySelector('.status-label').textContent = 'Connect Gmail';
-                        gmailStatus.onclick = handleGmailClick;
-                        gmailConnected = false;
                         showError('Gmail session expired. Reconnect to continue.');
                         return;
                     }
-                    const xeroStatus = document.getElementById('xero_status');
-                    xeroStatus.classList.remove('connected');
-                    xeroStatus.classList.add('disconnected');
-                    xeroStatus.querySelector('.status-label').textContent = 'Connect Xero';
-                    xeroStatus.onclick = handleXeroClick;
                     showError('Xero session expired. Reconnect to continue.');
                     return;
                 }
 
-                if (!res.ok) throw new Error(`Draft creation failed: ${res.status}`);
+                if (!res.ok) throw new Error('Send failed: ' + res.status);
 
-                const data = await res.json();
-                const isMobile = /Android|iPhone|iPad/i.test(navigator.userAgent);
-                if (isMobile) {
-                    showToast('Draft created — check your Gmail Drafts');
+                // Save variation index (fire and forget)
+                if (composeState.contactId) {
+                    fetch(`${WORKER_URL}/variation/${composeState.contactId}`, {
+                        method: 'PUT',
+                        credentials: 'include',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify({ index: composeState.selectedVariation }),
+                    }).catch(() => {});
+                }
+
+                closeComposeSheet();
+
+                if (scheduled) {
+                    const dt = new Date(composeState.scheduledAt);
+                    const opts = { month: 'short', day: 'numeric', hour: 'numeric', minute: '2-digit', hour12: true };
+                    showToast('Invoice scheduled for ' + dt.toLocaleDateString('en-US', opts) + ' ' + composeState.tzLabel);
                 } else {
-                    window.open(data.draftUrl, '_blank');
-                    showToast('Draft created — opened in Gmail');
+                    showToast('Invoice email sent');
                 }
             } catch (err) {
-                console.error('Draft creation failed:', err);
-                showError('Failed to create email draft. Try again.');
+                console.error('Send failed:', err);
+                showError('Failed to send email. Try again.');
             } finally {
-                btn.disabled = false;
-                // Restore button content
-                while (btn.firstChild) btn.removeChild(btn.firstChild);
-                const svg = document.createElementNS('http://www.w3.org/2000/svg', 'svg');
-                svg.setAttribute('width', '16');
-                svg.setAttribute('height', '16');
-                svg.setAttribute('viewBox', '0 0 24 24');
-                svg.setAttribute('fill', 'none');
-                svg.setAttribute('stroke', 'currentColor');
-                svg.setAttribute('stroke-width', '2.5');
-                svg.setAttribute('stroke-linecap', 'round');
-                svg.setAttribute('stroke-linejoin', 'round');
-                const path = document.createElementNS('http://www.w3.org/2000/svg', 'path');
-                path.setAttribute('d', 'M4 4h16c1.1 0 2 .9 2 2v12c0 1.1-.9 2-2 2H4c-1.1 0-2-.9-2-2V6c0-1.1.9-2 2-2z');
-                const polyline = document.createElementNS('http://www.w3.org/2000/svg', 'polyline');
-                polyline.setAttribute('points', '22,6 12,13 2,6');
-                svg.appendChild(path);
-                svg.appendChild(polyline);
-                btn.appendChild(svg);
-                btn.appendChild(document.createTextNode(' Draft Invoice Email'));
+                buttons.forEach(b => b.disabled = false);
             }
         }
 
