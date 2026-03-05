@@ -785,8 +785,14 @@
             if (res.status === 401) {
               const data = await res.json().catch(() => ({}));
               if (data.error === 'auth_required') {
+                const dd = document.getElementById('eventName');
+                dd.disabled = false;
+                dd.querySelector('option').textContent = 'Select a booking';
                 showLoginModal();
               } else if (!silent) {
+                const dd = document.getElementById('eventName');
+                dd.disabled = false;
+                dd.querySelector('option').textContent = 'Select a booking';
                 window.location.href = `${WORKER_URL}/auth`;
               }
               return;
@@ -796,6 +802,7 @@
 
             const data = await res.json();
             populateInvoiceDropdown(data.invoices);
+            document.getElementById('eventName').disabled = false;
 
             const xeroStatus = document.getElementById('xero_status');
             xeroStatus.classList.remove('disconnected');
@@ -804,6 +811,9 @@
             xeroStatus.onclick = null;
           } catch (err) {
             console.error('Error loading invoices:', err);
+            const dd = document.getElementById('eventName');
+            dd.disabled = false;
+            dd.querySelector('option').textContent = 'Select a booking';
             if (!silent) showToast('Failed to load invoices');
           }
         }
@@ -1372,6 +1382,10 @@
                 clickOpens: true,
                 disableMobile: "true",
             });
+
+            const dropdown = document.getElementById('eventName');
+            dropdown.disabled = true;
+            dropdown.querySelector('option').textContent = 'Loading bookings...';
 
             loadInvoices({ silent: true });
             checkGmailStatus({ silent: true });
