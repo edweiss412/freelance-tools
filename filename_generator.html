@@ -414,6 +414,45 @@
             transform: translateX(-50%) translateY(0);
         }
 
+        /* Error banner */
+        .error-banner {
+            display: none;
+            align-items: center;
+            gap: 10px;
+            padding: 12px 14px;
+            background: #fef2f2;
+            border: 1.5px solid #fca5a5;
+            border-radius: var(--radius);
+            margin-bottom: 20px;
+            font-size: 0.85rem;
+            color: #991b1b;
+            line-height: 1.4;
+            animation: fadeUp 0.3s ease-out;
+        }
+
+        .error-banner.show {
+            display: flex;
+        }
+
+        .error-banner-message {
+            flex: 1;
+        }
+
+        .error-banner-dismiss {
+            background: none;
+            border: none;
+            color: #991b1b;
+            cursor: pointer;
+            padding: 2px;
+            opacity: 0.6;
+            transition: opacity var(--transition);
+            flex-shrink: 0;
+        }
+
+        .error-banner-dismiss:hover {
+            opacity: 1;
+        }
+
         .login-overlay {
             position: fixed;
             inset: 0;
@@ -620,6 +659,16 @@
                 </div>
             </div>
 
+            <div class="error-banner" id="errorBanner">
+                <span class="error-banner-message" id="errorBannerMessage"></span>
+                <button class="error-banner-dismiss" onclick="dismissError()" title="Dismiss">
+                    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+                        <line x1="18" y1="6" x2="6" y2="18"/>
+                        <line x1="6" y1="6" x2="18" y2="18"/>
+                    </svg>
+                </button>
+            </div>
+
             <form onsubmit="generateFilename(event)" id="mainForm">
                 <div class="field">
                     <label for="eventName">Booking</label>
@@ -736,6 +785,16 @@
         let gmailConnected = false;
         let needsAuth = false;
 
+        function showError(message) {
+            const banner = document.getElementById('errorBanner');
+            document.getElementById('errorBannerMessage').textContent = message;
+            banner.classList.add('show');
+        }
+
+        function dismissError() {
+            document.getElementById('errorBanner').classList.remove('show');
+        }
+
         async function handleLoginSubmit(event) {
             event.preventDefault();
             const btn = document.getElementById('login_btn');
@@ -802,6 +861,7 @@
 
             const data = await res.json();
             populateInvoiceDropdown(data.invoices);
+            dismissError();
             document.getElementById('eventName').disabled = false;
 
             const xeroStatus = document.getElementById('xero_status');
@@ -814,7 +874,7 @@
             const dd = document.getElementById('eventName');
             dd.disabled = false;
             dd.querySelector('option').textContent = 'Select a booking';
-            if (!silent) showToast('Failed to load invoices');
+            if (!silent) showError('Failed to load bookings. Check your connection and try again.');
           }
         }
 
@@ -1113,7 +1173,7 @@
                 const res = await fetch(`${WORKER_URL}/invoices/${selectedInvoiceId}/pdf`, { credentials: 'include' });
 
                 if (res.status === 401) {
-                    showToast('Session expired — reload invoices');
+                    showError('Xero session expired. Reconnect to continue.');
                     return;
                 }
 
@@ -1133,7 +1193,7 @@
                 showToast('PDF downloaded');
             } catch (err) {
                 console.error('PDF download failed:', err);
-                showToast('Failed to download PDF');
+                showError('Failed to download PDF. Try again.');
             } finally {
                 btn.disabled = false;
                 setButtonLoading(btn, false);
@@ -1251,6 +1311,7 @@
                 const data = await res.json();
                 gmailConnected = data.connected;
                 if (gmailConnected) {
+                    dismissError();
                     const gmailStatus = document.getElementById('gmail_status');
                     gmailStatus.classList.remove('disconnected');
                     gmailStatus.classList.add('connected');
@@ -1307,7 +1368,7 @@
                         gmailStatus.querySelector('.status-label').textContent = 'Connect Gmail';
                         gmailStatus.onclick = handleGmailClick;
                         gmailConnected = false;
-                        showToast('Gmail session expired — reconnect');
+                        showError('Gmail session expired. Reconnect to continue.');
                         return;
                     }
                     const xeroStatus = document.getElementById('xero_status');
@@ -1315,7 +1376,7 @@
                     xeroStatus.classList.add('disconnected');
                     xeroStatus.querySelector('.status-label').textContent = 'Connect Xero';
                     xeroStatus.onclick = handleXeroClick;
-                    showToast('Xero session expired — reload invoices');
+                    showError('Xero session expired. Reconnect to continue.');
                     return;
                 }
 
@@ -1326,7 +1387,7 @@
                 showToast('Draft created — opened in Gmail');
             } catch (err) {
                 console.error('Draft creation failed:', err);
-                showToast('Failed to create draft');
+                showError('Failed to create email draft. Try again.');
             } finally {
                 btn.disabled = false;
                 // Restore button content
