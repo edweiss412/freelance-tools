@@ -561,6 +561,34 @@
             min-height: 1.2em;
         }
 
+        .password-wrapper {
+            position: relative;
+        }
+
+        .password-wrapper input {
+            padding-right: 42px;
+        }
+
+        .password-toggle {
+            position: absolute;
+            right: 10px;
+            top: 50%;
+            transform: translateY(-50%);
+            background: none;
+            border: none;
+            color: var(--text-muted);
+            cursor: pointer;
+            padding: 4px;
+            display: flex;
+            align-items: center;
+            opacity: 0.6;
+            transition: opacity var(--transition);
+        }
+
+        .password-toggle:hover {
+            opacity: 1;
+        }
+
         /* Flatpickr overrides */
         .flatpickr-calendar {
             font-family: 'DM Sans', sans-serif !important;
@@ -797,7 +825,15 @@
             <h2>Login Required</h2>
             <p>Enter your password to continue.</p>
             <form id="login_form" onsubmit="handleLoginSubmit(event)">
-                <input type="password" id="login_password" placeholder="Password" autocomplete="current-password" required>
+                <div class="password-wrapper">
+                    <input type="password" id="login_password" placeholder="Password" autocomplete="current-password" required>
+                    <button type="button" class="password-toggle" onclick="togglePassword()" title="Show password">
+                        <svg id="eye_icon" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                            <path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/>
+                            <circle cx="12" cy="12" r="3"/>
+                        </svg>
+                    </button>
+                </div>
                 <button type="submit" class="login-btn" id="login_btn">Login</button>
                 <p class="login-error" id="login_error"></p>
             </form>
@@ -818,6 +854,33 @@
 
         function dismissError() {
             document.getElementById('errorBanner').classList.remove('show');
+        }
+
+        function togglePassword() {
+            const input = document.getElementById('login_password');
+            const icon = document.getElementById('eye_icon');
+            const isPassword = input.type === 'password';
+            input.type = isPassword ? 'text' : 'password';
+
+            while (icon.firstChild) icon.removeChild(icon.firstChild);
+            if (isPassword) {
+                const path1 = document.createElementNS('http://www.w3.org/2000/svg', 'path');
+                path1.setAttribute('d', 'M17.94 17.94A10.07 10.07 0 0 1 12 20c-7 0-11-8-11-8a18.45 18.45 0 0 1 5.06-5.94');
+                const path2 = document.createElementNS('http://www.w3.org/2000/svg', 'path');
+                path2.setAttribute('d', 'M9.9 4.24A9.12 9.12 0 0 1 12 4c7 0 11 8 11 8a18.5 18.5 0 0 1-2.16 3.19');
+                const path3 = document.createElementNS('http://www.w3.org/2000/svg', 'path');
+                path3.setAttribute('d', 'M14.12 14.12a3 3 0 1 1-4.24-4.24');
+                const line = document.createElementNS('http://www.w3.org/2000/svg', 'line');
+                line.setAttribute('x1', '1'); line.setAttribute('y1', '1');
+                line.setAttribute('x2', '23'); line.setAttribute('y2', '23');
+                icon.append(path1, path2, path3, line);
+            } else {
+                const path = document.createElementNS('http://www.w3.org/2000/svg', 'path');
+                path.setAttribute('d', 'M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z');
+                const circle = document.createElementNS('http://www.w3.org/2000/svg', 'circle');
+                circle.setAttribute('cx', '12'); circle.setAttribute('cy', '12'); circle.setAttribute('r', '3');
+                icon.append(path, circle);
+            }
         }
 
         async function handleLoginSubmit(event) {
