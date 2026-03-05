@@ -650,6 +650,271 @@
             to { transform: rotate(360deg); }
         }
 
+        /* Custom booking picker */
+        .booking-trigger {
+            width: 100%;
+            padding: 11px 14px;
+            font-family: 'DM Sans', sans-serif;
+            font-size: 0.9375rem;
+            color: var(--text);
+            background: var(--input-bg);
+            border: 1.5px solid var(--input-border);
+            border-radius: var(--radius);
+            transition: all var(--transition);
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            gap: 10px;
+            text-align: left;
+        }
+
+        .booking-trigger:focus {
+            outline: none;
+            border-color: var(--input-focus);
+            box-shadow: 0 0 0 3px var(--accent-glow);
+        }
+
+        .booking-trigger-text {
+            flex: 1;
+            min-width: 0;
+        }
+
+        .booking-trigger-text .bt-label {
+            color: var(--text-muted);
+            opacity: 0.5;
+        }
+
+        .booking-trigger-text .bt-number {
+            font-weight: 600;
+            color: var(--accent);
+        }
+
+        .booking-trigger-text .bt-detail {
+            font-size: 0.8125rem;
+            color: var(--text-muted);
+            white-space: nowrap;
+            overflow: hidden;
+            text-overflow: ellipsis;
+            margin-top: 1px;
+        }
+
+        .booking-trigger-arrow {
+            flex-shrink: 0;
+            color: var(--text-muted);
+            opacity: 0.5;
+        }
+
+        .booking-trigger.disabled {
+            opacity: 0.5;
+            pointer-events: none;
+        }
+
+        .booking-overlay {
+            position: fixed;
+            inset: 0;
+            background: rgba(0, 0, 0, 0.5);
+            z-index: 1000;
+            opacity: 0;
+            visibility: hidden;
+            transition: opacity 0.25s ease, visibility 0.25s ease;
+        }
+
+        .booking-overlay.open {
+            opacity: 1;
+            visibility: visible;
+        }
+
+        .booking-sheet {
+            position: fixed;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            z-index: 1001;
+            background: var(--card);
+            border-radius: 20px 20px 0 0;
+            max-height: 80vh;
+            display: flex;
+            flex-direction: column;
+            transform: translateY(100%);
+            transition: transform 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+            box-shadow: 0 -8px 40px rgba(0, 0, 0, 0.15);
+        }
+
+        .booking-sheet.open {
+            transform: translateY(0);
+        }
+
+        .booking-sheet-handle {
+            width: 36px;
+            height: 4px;
+            background: var(--input-border);
+            border-radius: 2px;
+            margin: 10px auto 0;
+            flex-shrink: 0;
+        }
+
+        .booking-sheet-header {
+            padding: 16px 20px 12px;
+            flex-shrink: 0;
+        }
+
+        .booking-sheet-title {
+            font-family: 'Instrument Serif', serif;
+            font-size: 1.35rem;
+            color: var(--text);
+            margin-bottom: 10px;
+        }
+
+        .booking-search {
+            width: 100%;
+            padding: 10px 14px 10px 36px;
+            font-family: 'DM Sans', sans-serif;
+            font-size: 0.875rem;
+            color: var(--text);
+            background: #f5f1eb;
+            border: 1.5px solid transparent;
+            border-radius: 8px;
+            transition: all var(--transition);
+        }
+
+        .booking-search:focus {
+            outline: none;
+            border-color: var(--input-focus);
+            background: var(--input-bg);
+        }
+
+        .booking-search-wrap {
+            position: relative;
+        }
+
+        .booking-search-icon {
+            position: absolute;
+            left: 12px;
+            top: 50%;
+            transform: translateY(-50%);
+            color: var(--text-muted);
+            opacity: 0.4;
+            pointer-events: none;
+        }
+
+        .booking-list {
+            flex: 1;
+            overflow-y: auto;
+            padding: 0 12px 20px;
+            -webkit-overflow-scrolling: touch;
+        }
+
+        .booking-group-label {
+            font-size: 0.6875rem;
+            font-weight: 700;
+            text-transform: uppercase;
+            letter-spacing: 0.08em;
+            color: var(--text-muted);
+            padding: 12px 8px 6px;
+        }
+
+        .booking-item {
+            padding: 12px;
+            border-radius: 10px;
+            cursor: pointer;
+            transition: background var(--transition);
+            display: flex;
+            align-items: flex-start;
+            gap: 10px;
+        }
+
+        .booking-item:active {
+            background: var(--accent-glow);
+        }
+
+        .booking-item-content {
+            flex: 1;
+            min-width: 0;
+        }
+
+        .booking-item-number {
+            font-size: 0.8125rem;
+            font-weight: 700;
+            color: var(--accent);
+            letter-spacing: 0.02em;
+        }
+
+        .booking-item-company {
+            font-size: 0.9375rem;
+            font-weight: 500;
+            color: var(--text);
+            margin-top: 2px;
+            line-height: 1.3;
+        }
+
+        .booking-item-event {
+            font-size: 0.8125rem;
+            color: var(--text-muted);
+            margin-top: 2px;
+            line-height: 1.3;
+        }
+
+        .booking-item-check {
+            flex-shrink: 0;
+            width: 20px;
+            height: 20px;
+            border-radius: 50%;
+            border: 2px solid var(--input-border);
+            margin-top: 2px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            transition: all var(--transition);
+        }
+
+        .booking-item.selected .booking-item-check {
+            background: var(--accent);
+            border-color: var(--accent);
+        }
+
+        .booking-item.selected .booking-item-check::after {
+            content: '';
+            width: 6px;
+            height: 6px;
+            border-radius: 50%;
+            background: white;
+        }
+
+        .booking-empty {
+            text-align: center;
+            padding: 32px 16px;
+            color: var(--text-muted);
+            font-size: 0.875rem;
+        }
+
+        @media (min-width: 640px) {
+            .booking-sheet {
+                max-width: 480px;
+                left: 50%;
+                right: auto;
+                bottom: 50%;
+                transform: translate(-50%, 50%) scale(0.95);
+                opacity: 0;
+                border-radius: 16px;
+                max-height: 70vh;
+                transition: transform 0.25s ease, opacity 0.25s ease;
+            }
+
+            .booking-sheet.open {
+                transform: translate(-50%, 50%) scale(1);
+                opacity: 1;
+            }
+
+            .booking-sheet-handle {
+                display: none;
+            }
+
+            .booking-item:hover {
+                background: var(--accent-glow);
+            }
+        }
+
         /* Mobile refinements */
         @media (max-width: 480px) {
             body {
@@ -719,9 +984,13 @@
             <form onsubmit="generateFilename(event)" id="mainForm">
                 <div class="field">
                     <label for="eventName">Booking</label>
-                    <select id="eventName" name="eventName">
+                    <select id="eventName" name="eventName" style="display:none">
                         <option value="">Select a booking</option>
                     </select>
+                    <button type="button" class="booking-trigger" id="bookingTrigger" onclick="openBookingPicker()">
+                        <span class="booking-trigger-text"><span class="bt-label">Select a booking</span></span>
+                        <svg class="booking-trigger-arrow" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="6 9 12 15 18 9"/></svg>
+                    </button>
                     <div class="or-divider">or enter details manually</div>
                     <input type="text" id="manualEventName" name="manualEventName" placeholder="Enter booking name...">
                     <p class="field-hint">Selecting a booking above auto-fills all fields. Typing here overrides only the booking name.</p>
@@ -929,11 +1198,13 @@
                 const dd = document.getElementById('eventName');
                 dd.disabled = false;
                 dd.querySelector('option').textContent = 'Select a booking';
+                resetBookingTrigger();
                 showLoginModal();
               } else if (!silent) {
                 const dd = document.getElementById('eventName');
                 dd.disabled = false;
                 dd.querySelector('option').textContent = 'Select a booking';
+                resetBookingTrigger();
                 window.location.href = `${WORKER_URL}/auth`;
               }
               return;
@@ -956,6 +1227,7 @@
             const dd = document.getElementById('eventName');
             dd.disabled = false;
             dd.querySelector('option').textContent = 'Select a booking';
+            resetBookingTrigger();
             if (!silent) showError('Failed to load bookings. Check your connection and try again.');
           }
         }
@@ -996,6 +1268,152 @@
             });
             dropdown.appendChild(optgroup);
           }
+
+          // Populate custom booking picker
+          populateBookingList(groups);
+          document.getElementById('bookingTrigger').classList.remove('disabled');
+        }
+
+        let bookingInvoiceGroups = null;
+
+        function populateBookingList(groups) {
+          bookingInvoiceGroups = groups;
+          renderBookingList(groups, '');
+        }
+
+        function renderBookingList(groups, filter) {
+          const list = document.getElementById('bookingList');
+          while (list.firstChild) list.removeChild(list.firstChild);
+          const lowerFilter = filter.toLowerCase();
+          let hasItems = false;
+
+          for (const group of Object.values(groups)) {
+            if (group.items.length === 0) continue;
+            const filtered = lowerFilter
+              ? group.items.filter(inv =>
+                  inv.invoiceNumber.toLowerCase().includes(lowerFilter) ||
+                  inv.contact.toLowerCase().includes(lowerFilter) ||
+                  (inv.reference || '').toLowerCase().includes(lowerFilter)
+                )
+              : group.items;
+            if (filtered.length === 0) continue;
+            hasItems = true;
+
+            const label = document.createElement('div');
+            label.className = 'booking-group-label';
+            label.textContent = group.label;
+            list.appendChild(label);
+
+            filtered.forEach(inv => {
+              const item = document.createElement('div');
+              item.className = 'booking-item';
+              if (document.getElementById('eventName').value === JSON.stringify(inv)) {
+                item.classList.add('selected');
+              }
+              item.dataset.value = JSON.stringify(inv);
+
+              const parsed = parseReference(inv.reference);
+              const eventDisplay = parsed.eventName || inv.reference || '';
+
+              const content = document.createElement('div');
+              content.className = 'booking-item-content';
+
+              const num = document.createElement('div');
+              num.className = 'booking-item-number';
+              num.textContent = inv.invoiceNumber;
+              content.appendChild(num);
+
+              const company = document.createElement('div');
+              company.className = 'booking-item-company';
+              company.textContent = inv.contact;
+              content.appendChild(company);
+
+              if (eventDisplay) {
+                const event = document.createElement('div');
+                event.className = 'booking-item-event';
+                event.textContent = eventDisplay;
+                content.appendChild(event);
+              }
+
+              const check = document.createElement('div');
+              check.className = 'booking-item-check';
+
+              item.appendChild(content);
+              item.appendChild(check);
+              item.addEventListener('click', () => selectBooking(inv));
+              list.appendChild(item);
+            });
+          }
+
+          if (!hasItems) {
+            const empty = document.createElement('div');
+            empty.className = 'booking-empty';
+            empty.textContent = lowerFilter ? 'No bookings match your search' : 'No bookings available';
+            list.appendChild(empty);
+          }
+        }
+
+        function openBookingPicker() {
+          if (document.getElementById('bookingTrigger').classList.contains('disabled')) return;
+          document.getElementById('bookingOverlay').classList.add('open');
+          document.getElementById('bookingSheet').classList.add('open');
+          document.body.style.overflow = 'hidden';
+          const search = document.getElementById('bookingSearch');
+          search.value = '';
+          if (bookingInvoiceGroups) renderBookingList(bookingInvoiceGroups, '');
+          setTimeout(() => search.focus(), 300);
+        }
+
+        function closeBookingPicker() {
+          document.getElementById('bookingOverlay').classList.remove('open');
+          document.getElementById('bookingSheet').classList.remove('open');
+          document.body.style.overflow = '';
+        }
+
+        document.addEventListener('keydown', function(e) {
+          if (e.key === 'Escape') closeBookingPicker();
+        });
+
+        function selectBooking(inv) {
+          const dropdown = document.getElementById('eventName');
+          dropdown.value = JSON.stringify(inv);
+          dropdown.dispatchEvent(new Event('change'));
+
+          // Update trigger display
+          const trigger = document.getElementById('bookingTrigger');
+          const textEl = trigger.querySelector('.booking-trigger-text');
+          const parsed = parseReference(inv.reference);
+          const eventDisplay = parsed.eventName || inv.reference || '';
+
+          while (textEl.firstChild) textEl.removeChild(textEl.firstChild);
+          const numSpan = document.createElement('span');
+          numSpan.className = 'bt-number';
+          numSpan.textContent = inv.invoiceNumber;
+          textEl.appendChild(numSpan);
+          textEl.appendChild(document.createTextNode(' \u2014 ' + inv.contact));
+          if (eventDisplay) {
+            const detail = document.createElement('div');
+            detail.className = 'bt-detail';
+            detail.textContent = eventDisplay;
+            textEl.appendChild(detail);
+          }
+
+          closeBookingPicker();
+        }
+
+        function filterBookings(query) {
+          if (bookingInvoiceGroups) renderBookingList(bookingInvoiceGroups, query);
+        }
+
+        function resetBookingTrigger() {
+          const trigger = document.getElementById('bookingTrigger');
+          trigger.classList.remove('disabled');
+          const textEl = trigger.querySelector('.booking-trigger-text');
+          while (textEl.firstChild) textEl.removeChild(textEl.firstChild);
+          const label = document.createElement('span');
+          label.className = 'bt-label';
+          label.textContent = 'Select a booking';
+          textEl.appendChild(label);
         }
 
         function parseReference(reference) {
@@ -1540,6 +1958,14 @@
             const dropdown = document.getElementById('eventName');
             dropdown.disabled = true;
             dropdown.querySelector('option').textContent = 'Loading bookings...';
+            const trigger = document.getElementById('bookingTrigger');
+            trigger.classList.add('disabled');
+            const triggerText = trigger.querySelector('.booking-trigger-text');
+            while (triggerText.firstChild) triggerText.removeChild(triggerText.firstChild);
+            const loadLabel = document.createElement('span');
+            loadLabel.className = 'bt-label';
+            loadLabel.textContent = 'Loading bookings\u2026';
+            triggerText.appendChild(loadLabel);
 
             document.getElementById('filenameOutput').addEventListener('input', function() {
                 const edited = getOutputText(this) !== this.dataset.original;
@@ -1561,5 +1987,18 @@
             checkGmailStatus({ silent: true });
         };
     </script>
+
+    <div class="booking-overlay" id="bookingOverlay" onclick="closeBookingPicker()"></div>
+    <div class="booking-sheet" id="bookingSheet">
+        <div class="booking-sheet-handle"></div>
+        <div class="booking-sheet-header">
+            <div class="booking-sheet-title">Select a Booking</div>
+            <div class="booking-search-wrap">
+                <svg class="booking-search-icon" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>
+                <input type="text" class="booking-search" id="bookingSearch" placeholder="Search bookings..." oninput="filterBookings(this.value)">
+            </div>
+        </div>
+        <div class="booking-list" id="bookingList"></div>
+    </div>
 </body>
 </html>
