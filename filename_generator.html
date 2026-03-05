@@ -752,7 +752,7 @@
             height: 4px;
             background: var(--input-border);
             border-radius: 2px;
-            margin: 10px auto 0;
+            margin: 12px auto 4px;
             flex-shrink: 0;
         }
 
@@ -1376,6 +1376,44 @@
         document.addEventListener('keydown', function(e) {
           if (e.key === 'Escape') closeBookingPicker();
         });
+
+        // Swipe-to-dismiss for mobile bottom sheet
+        (function() {
+          const sheet = document.getElementById('bookingSheet');
+          const handle = sheet.querySelector('.booking-sheet-handle');
+          const header = sheet.querySelector('.booking-sheet-header');
+          let startY = 0, currentY = 0, dragging = false;
+
+          function onStart(e) {
+            if (window.innerWidth >= 640) return;
+            dragging = true;
+            startY = e.touches[0].clientY;
+            currentY = 0;
+            sheet.style.transition = 'none';
+          }
+
+          function onMove(e) {
+            if (!dragging) return;
+            currentY = e.touches[0].clientY - startY;
+            if (currentY < 0) currentY = 0;
+            sheet.style.transform = 'translateY(' + currentY + 'px)';
+          }
+
+          function onEnd() {
+            if (!dragging) return;
+            dragging = false;
+            sheet.style.transition = '';
+            if (currentY > 100) {
+              closeBookingPicker();
+            }
+            sheet.style.transform = '';
+          }
+
+          handle.addEventListener('touchstart', onStart, { passive: true });
+          header.addEventListener('touchstart', onStart, { passive: true });
+          document.addEventListener('touchmove', onMove, { passive: true });
+          document.addEventListener('touchend', onEnd);
+        })();
 
         function selectBooking(inv) {
           const dropdown = document.getElementById('eventName');
