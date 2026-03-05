@@ -11,3 +11,6 @@ ALLOWED_ORIGIN = "https://edweiss412.github.io"
 XERO_REDIRECT_URI = "https://xero-invoice-proxy.edweiss412.workers.dev/callback"
 FRONTEND_URL = "https://edweiss412.github.io/freelance-tools/filename_generator.html"
 GOOGLE_REDIRECT_URI = "https://xero-invoice-proxy.edweiss412.workers.dev/gmail/callback"
+
+[triggers]
+crons = ["*/5 * * * *"]

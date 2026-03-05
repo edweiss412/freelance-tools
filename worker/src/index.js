@@ -39,8 +39,62 @@ export default {
     if (variationMatch && request.method === 'GET') return handleGetVariation(variationMatch[1], env);
     if (variationMatch && request.method === 'PUT') return handlePutVariation(variationMatch[1], request, env);
 
+    if (path === '/gmail/send' && request.method === 'POST') return handleGmailSend(request, env);
+
     return new Response('Not found', { status: 404 });
-  }
+  },
+
+  async scheduled(event, env, ctx) {
+    const indexRaw = await env.TOKENS.get('scheduled_sends_index');
+    if (!indexRaw) return;
+
+    const index = JSON.parse(indexRaw);
+    const now = new Date();
+    const remaining = [];
+
+    for (const draftId of index) {
+      const jobRaw = await env.TOKENS.get(`scheduled:${draftId}`);
+      if (!jobRaw) continue;
+
+      const job = JSON.parse(jobRaw);
+      const sendAt = new Date(job.sendAt);
+
+      if (sendAt <= now) {
+        try {
+          const gmailToken = await getValidGmailToken(env);
+          if (!gmailToken) {
+            remaining.push(draftId);
+            continue;
+          }
+
+          const sendRes = await fetch(`https://gmail.googleapis.com/gmail/v1/users/me/drafts/send`, {
+            method: 'POST',
+            headers: {
+              'Authorization': `Bearer ${gmailToken}`,
+              'Content-Type': 'application/json',
+            },
+            body: JSON.stringify({ id: draftId }),
+          });
+
+          if (sendRes.ok) {
+            await env.TOKENS.delete(`scheduled:${draftId}`);
+          } else {
+            remaining.push(draftId);
+          }
+        } catch {
+          remaining.push(draftId);
+        }
+      } else {
+        remaining.push(draftId);
+      }
+    }
+
+    if (remaining.length > 0) {
+      await env.TOKENS.put('scheduled_sends_index', JSON.stringify(remaining));
+    } else {
+      await env.TOKENS.delete('scheduled_sends_index');
+    }
+  },
 };
 
 const US_STATE_TIMEZONES = {
@@ -505,6 +559,125 @@ async function handleGmailDraft(request, env) {
       messageId: draft.message.id,
       draftUrl: `https://mail.google.com/mail/u/0/#drafts/${draft.message.id}`,
     }), {
+      headers: jsonHeaders,
+    });
+  } catch (err) {
+    return new Response(JSON.stringify({ error: 'internal_error', details: err.message }), {
+      status: 500, headers: jsonHeaders,
+    });
+  }
+}
+
+async function handleGmailSend(request, env) {
+  const headers = corsHeaders(env);
+  const jsonHeaders = { ...headers, 'Content-Type': 'application/json' };
+
+  try {
+    const { invoiceId, to, subject, body, filename, scheduledAt } = await request.json();
+
+    if (!invoiceId || !to || !subject || !body || !filename) {
+      return new Response(JSON.stringify({ error: 'Missing required fields: invoiceId, to, subject, body, filename' }), {
+        status: 400, headers: jsonHeaders,
+      });
+    }
+
+    if (!/^[a-f0-9-]+$/i.test(invoiceId)) {
+      return new Response(JSON.stringify({ error: 'Invalid invoiceId' }), {
+        status: 400, headers: jsonHeaders,
+      });
+    }
+
+    const gmailToken = await getValidGmailToken(env);
+    if (!gmailToken) {
+      return new Response(JSON.stringify({ error: 'gmail_auth_required' }), {
+        status: 401, headers: jsonHeaders,
+      });
+    }
+
+    const xeroToken = await getValidToken(env);
+    if (!xeroToken) {
+      return new Response(JSON.stringify({ error: 'xero_auth_required' }), {
+        status: 401, headers: jsonHeaders,
+      });
+    }
+
+    // Fetch invoice PDF from Xero
+    const tenantId = await env.TOKENS.get('tenant_id');
+    const pdfRes = await fetch(`https://api.xero.com/api.xro/2.0/Invoices/${invoiceId}`, {
+      headers: {
+        'Authorization': `Bearer ${xeroToken}`,
+        'xero-tenant-id': tenantId,
+        'Accept': 'application/pdf',
+      },
+    });
+
+    if (!pdfRes.ok) {
+      return new Response(JSON.stringify({ error: 'pdf_fetch_failed', details: await pdfRes.text() }), {
+        status: 500, headers: jsonHeaders,
+      });
+    }
+
+    const pdfBytes = await pdfRes.arrayBuffer();
+    const mimeMessage = buildMimeMessage({ to, subject, body, pdfBytes, pdfFilename: filename });
+    const rawMessage = base64url(mimeMessage);
+
+    const gmailHeaders = {
+      'Authorization': `Bearer ${gmailToken}`,
+      'Content-Type': 'application/json',
+    };
+
+    // Scheduled send: create draft + store scheduled job in KV
+    if (scheduledAt) {
+      const draftRes = await fetch('https://gmail.googleapis.com/gmail/v1/users/me/drafts', {
+        method: 'POST',
+        headers: gmailHeaders,
+        body: JSON.stringify({ message: { raw: rawMessage } }),
+      });
+
+      if (!draftRes.ok) {
+        const err = await draftRes.text();
+        return new Response(JSON.stringify({ error: 'draft_creation_failed', details: err }), {
+          status: 500, headers: jsonHeaders,
+        });
+      }
+
+      const draft = await draftRes.json();
+
+      // Store scheduled send job in KV
+      const jobId = `scheduled:${draft.id}`;
+      await env.TOKENS.put(jobId, JSON.stringify({
+        draftId: draft.id,
+        sendAt: scheduledAt,
+        createdAt: new Date().toISOString(),
+      }));
+
+      // Add to scheduled sends index for cron to find
+      const indexRaw = await env.TOKENS.get('scheduled_sends_index');
+      const index = indexRaw ? JSON.parse(indexRaw) : [];
+      index.push(draft.id);
+      await env.TOKENS.put('scheduled_sends_index', JSON.stringify(index));
+
+      return new Response(JSON.stringify({ draftId: draft.id, scheduled: true }), {
+        headers: jsonHeaders,
+      });
+    }
+
+    // Immediate send
+    const sendRes = await fetch('https://gmail.googleapis.com/gmail/v1/users/me/messages/send', {
+      method: 'POST',
+      headers: gmailHeaders,
+      body: JSON.stringify({ raw: rawMessage }),
+    });
+
+    if (!sendRes.ok) {
+      const err = await sendRes.text();
+      return new Response(JSON.stringify({ error: 'send_failed', details: err }), {
+        status: 500, headers: jsonHeaders,
+      });
+    }
+
+    const result = await sendRes.json();
+    return new Response(JSON.stringify({ messageId: result.id, scheduled: false }), {
       headers: jsonHeaders,
     });
   } catch (err) {
