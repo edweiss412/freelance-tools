@@ -2630,11 +2630,20 @@
         }
 
         function setDefaultSchedule() {
-            const tomorrow = new Date();
-            tomorrow.setDate(tomorrow.getDate() + 1);
-            const yyyy = tomorrow.getFullYear();
-            const mm = String(tomorrow.getMonth() + 1).padStart(2, '0');
-            const dd = String(tomorrow.getDate()).padStart(2, '0');
+            // Compute "tomorrow 8am" in the contact's timezone
+            const now = new Date();
+            // Get tomorrow's date in contact timezone
+            const formatter = new Intl.DateTimeFormat('en-CA', {
+                timeZone: composeState.timezone,
+                year: 'numeric', month: '2-digit', day: '2-digit',
+            });
+            const todayInTz = formatter.format(now);
+            const [y, m, d] = todayInTz.split('-').map(Number);
+            const tomorrowDate = new Date(y, m - 1, d + 1);
+            const yyyy = tomorrowDate.getFullYear();
+            const mm = String(tomorrowDate.getMonth() + 1).padStart(2, '0');
+            const dd = String(tomorrowDate.getDate()).padStart(2, '0');
+            // Store as display string (contact-local time)
             composeState.scheduledAt = `${yyyy}-${mm}-${dd}T08:00:00`;
             updateScheduleDisplay();
         }
@@ -2703,7 +2712,16 @@
                 };
 
                 if (scheduled && composeState.scheduledAt) {
-                    payload.scheduledAt = composeState.scheduledAt;
+                    // Convert contact-local time to UTC ISO string for the worker
+                    // Create a date interpreted in the contact's timezone
+                    const localStr = composeState.scheduledAt;
+                    const utcDate = new Date(new Date(localStr).toLocaleString('en-US', { timeZone: composeState.timezone }));
+                    // Compute offset: parse in contact tz, compare to UTC
+                    const asLocal = new Date(localStr + 'Z'); // treat as UTC temporarily
+                    const inTz = new Date(asLocal.toLocaleString('en-US', { timeZone: composeState.timezone }));
+                    const offset = inTz.getTime() - asLocal.getTime();
+                    const utc = new Date(new Date(localStr).getTime() - offset);
+                    payload.scheduledAt = utc.toISOString();
                 }
 
                 const res = await fetch(`${WORKER_URL}/gmail/send`, {
