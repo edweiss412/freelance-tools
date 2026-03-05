@@ -106,36 +106,58 @@
             animation: fadeUp 0.5s ease-out 0.1s both;
         }
 
-        /* Calendar connect button */
-        .calendar-btn {
+        /* Status bar */
+        .status-bar {
             display: flex;
             align-items: center;
-            justify-content: center;
-            gap: 8px;
-            width: 100%;
-            padding: 12px 20px;
+            gap: 16px;
+            padding: 10px 14px;
             background: var(--input-bg);
-            border: 1.5px dashed var(--input-border);
+            border: 1.5px solid var(--input-border);
             border-radius: var(--radius);
-            color: var(--text-muted);
-            font-family: 'DM Sans', sans-serif;
-            font-size: 0.875rem;
-            font-weight: 500;
-            cursor: pointer;
-            transition: all var(--transition);
             margin-bottom: 24px;
+            font-size: 0.8rem;
+            font-weight: 500;
         }
 
-        .calendar-btn:hover {
-            border-color: var(--accent);
+        .status-item {
+            display: flex;
+            align-items: center;
+            gap: 6px;
+            color: var(--text-muted);
+            cursor: default;
+            transition: color var(--transition);
+        }
+
+        .status-item.disconnected {
+            cursor: pointer;
+        }
+
+        .status-item.disconnected:hover {
             color: var(--accent);
-            background: var(--accent-glow);
         }
 
-        .calendar-btn svg {
-            width: 18px;
-            height: 18px;
+        .status-dot {
+            width: 7px;
+            height: 7px;
+            border-radius: 50%;
+            background: var(--input-border);
+            transition: background var(--transition);
             flex-shrink: 0;
+        }
+
+        .status-item.connected .status-dot {
+            background: var(--success);
+        }
+
+        .status-item.connected {
+            color: var(--text);
+        }
+
+        .status-separator {
+            width: 1px;
+            height: 16px;
+            background: var(--input-border);
         }
 
         /* Form elements */
@@ -586,23 +608,17 @@
         </header>
 
         <div class="card">
-            <button class="calendar-btn" id="authorize_button" onclick="loadInvoices()">
-                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-                    <rect x="3" y="4" width="18" height="18" rx="2" ry="2"/>
-                    <line x1="16" y1="2" x2="16" y2="6"/>
-                    <line x1="8" y1="2" x2="8" y2="6"/>
-                    <line x1="3" y1="10" x2="21" y2="10"/>
-                </svg>
-                Load Xero Invoices
-            </button>
-
-            <button class="calendar-btn" id="gmail_connect_btn" onclick="connectGmail()">
-                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-                    <path d="M4 4h16c1.1 0 2 .9 2 2v12c0 1.1-.9 2-2 2H4c-1.1 0-2-.9-2-2V6c0-1.1.9-2 2-2z"/>
-                    <polyline points="22,6 12,13 2,6"/>
-                </svg>
-                Connect Gmail
-            </button>
+            <div class="status-bar">
+                <div class="status-item disconnected" id="xero_status" onclick="handleXeroClick()">
+                    <span class="status-dot"></span>
+                    <span class="status-label">Connect Xero</span>
+                </div>
+                <div class="status-separator"></div>
+                <div class="status-item disconnected" id="gmail_status" onclick="handleGmailClick()">
+                    <span class="status-dot"></span>
+                    <span class="status-label">Connect Gmail</span>
+                </div>
+            </div>
 
             <form onsubmit="generateFilename(event)" id="mainForm">
                 <div class="field">
@@ -763,8 +779,6 @@
         }
 
         async function loadInvoices({ silent = false } = {}) {
-          const btn = document.getElementById('authorize_button');
-
           try {
             const res = await fetch(`${WORKER_URL}/invoices`, { credentials: 'include' });
 
@@ -783,28 +797,11 @@
             const data = await res.json();
             populateInvoiceDropdown(data.invoices);
 
-            // Update button to show connected state
-            btn.textContent = '';
-            const checkSvg = document.createElementNS('http://www.w3.org/2000/svg', 'svg');
-            checkSvg.setAttribute('viewBox', '0 0 24 24');
-            checkSvg.setAttribute('fill', 'none');
-            checkSvg.setAttribute('stroke', 'currentColor');
-            checkSvg.setAttribute('stroke-width', '2.5');
-            checkSvg.setAttribute('stroke-linecap', 'round');
-            checkSvg.setAttribute('stroke-linejoin', 'round');
-            const polyline = document.createElementNS('http://www.w3.org/2000/svg', 'polyline');
-            polyline.setAttribute('points', '20 6 9 17 4 12');
-            checkSvg.appendChild(polyline);
-            btn.appendChild(checkSvg);
-            btn.appendChild(document.createTextNode(' Xero Connected'));
-            btn.style.borderColor = 'var(--success)';
-            btn.style.color = 'var(--success)';
-            btn.style.background = 'var(--success-bg)';
-            if (silent) {
-              btn.style.display = 'none';
-            } else {
-              setTimeout(() => { btn.style.display = 'none'; }, 1500);
-            }
+            const xeroStatus = document.getElementById('xero_status');
+            xeroStatus.classList.remove('disconnected');
+            xeroStatus.classList.add('connected');
+            xeroStatus.querySelector('.status-label').textContent = 'Xero';
+            xeroStatus.onclick = null;
           } catch (err) {
             console.error('Error loading invoices:', err);
             if (!silent) showToast('Failed to load invoices');
@@ -1244,7 +1241,11 @@
             setTimeout(() => toast.classList.remove('show'), 2200);
         }
 
-        async function connectGmail() {
+        function handleXeroClick() {
+            loadInvoices();
+        }
+
+        function handleGmailClick() {
             window.location.href = `${WORKER_URL}/gmail/auth`;
         }
 
@@ -1255,28 +1256,11 @@
                 const data = await res.json();
                 gmailConnected = data.connected;
                 if (gmailConnected) {
-                    const btn = document.getElementById('gmail_connect_btn');
-                    btn.textContent = '';
-                    const checkSvg = document.createElementNS('http://www.w3.org/2000/svg', 'svg');
-                    checkSvg.setAttribute('viewBox', '0 0 24 24');
-                    checkSvg.setAttribute('fill', 'none');
-                    checkSvg.setAttribute('stroke', 'currentColor');
-                    checkSvg.setAttribute('stroke-width', '2.5');
-                    checkSvg.setAttribute('stroke-linecap', 'round');
-                    checkSvg.setAttribute('stroke-linejoin', 'round');
-                    const polyline = document.createElementNS('http://www.w3.org/2000/svg', 'polyline');
-                    polyline.setAttribute('points', '20 6 9 17 4 12');
-                    checkSvg.appendChild(polyline);
-                    btn.appendChild(checkSvg);
-                    btn.appendChild(document.createTextNode(' Gmail Connected'));
-                    btn.style.borderColor = 'var(--success)';
-                    btn.style.color = 'var(--success)';
-                    btn.style.background = 'var(--success-bg)';
-                    if (silent) {
-                      btn.style.display = 'none';
-                    } else {
-                      setTimeout(() => { btn.style.display = 'none'; }, 1500);
-                    }
+                    const gmailStatus = document.getElementById('gmail_status');
+                    gmailStatus.classList.remove('disconnected');
+                    gmailStatus.classList.add('connected');
+                    gmailStatus.querySelector('.status-label').textContent = 'Gmail';
+                    gmailStatus.onclick = null;
                 }
             } catch (err) {
                 console.error('Gmail status check failed:', err);
@@ -1322,17 +1306,20 @@
                 if (res.status === 401) {
                     const data = await res.json();
                     if (data.error === 'gmail_auth_required') {
-                        const gmailBtn = document.getElementById('gmail_connect_btn');
-                        gmailBtn.style.display = '';
-                        gmailBtn.textContent = 'Connect Gmail';
-                        gmailBtn.style.borderColor = '';
-                        gmailBtn.style.color = '';
-                        gmailBtn.style.background = '';
+                        const gmailStatus = document.getElementById('gmail_status');
+                        gmailStatus.classList.remove('connected');
+                        gmailStatus.classList.add('disconnected');
+                        gmailStatus.querySelector('.status-label').textContent = 'Connect Gmail';
+                        gmailStatus.onclick = handleGmailClick;
                         gmailConnected = false;
                         showToast('Gmail session expired — reconnect');
                         return;
                     }
-                    document.getElementById('authorize_button').style.display = '';
+                    const xeroStatus = document.getElementById('xero_status');
+                    xeroStatus.classList.remove('connected');
+                    xeroStatus.classList.add('disconnected');
+                    xeroStatus.querySelector('.status-label').textContent = 'Connect Xero';
+                    xeroStatus.onclick = handleXeroClick;
                     showToast('Xero session expired — reload invoices');
                     return;
                 }
