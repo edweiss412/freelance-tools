@@ -35,6 +35,10 @@ export default {
     if (path === '/gmail/recipient' && request.method === 'GET') return handleGmailRecipient(url, env);
     if (path === '/xero/contact-timezone' && request.method === 'GET') return handleContactTimezone(url, env);
 
+    const variationMatch = path.match(/^\/variation\/([a-f0-9-]+)$/i);
+    if (variationMatch && request.method === 'GET') return handleGetVariation(variationMatch[1], env);
+    if (variationMatch && request.method === 'PUT') return handlePutVariation(variationMatch[1], request, env);
+
     return new Response('Not found', { status: 404 });
   }
 };
@@ -75,7 +79,7 @@ const DEFAULT_TZ_LABEL = 'CT';
 function corsHeaders(env) {
   return {
     'Access-Control-Allow-Origin': env.ALLOWED_ORIGIN,
-    'Access-Control-Allow-Methods': 'GET, POST, OPTIONS',
+    'Access-Control-Allow-Methods': 'GET, POST, PUT, OPTIONS',
     'Access-Control-Allow-Headers': 'Content-Type',
     'Access-Control-Allow-Credentials': 'true',
   };
@@ -700,4 +704,21 @@ async function handleContactTimezone(url, env) {
       headers: jsonHeaders,
     });
   }
+}
+
+async function handleGetVariation(contactId, env) {
+  const headers = corsHeaders(env);
+  const jsonHeaders = { ...headers, 'Content-Type': 'application/json' };
+  const lastIndex = await env.TOKENS.get(`variation:${contactId}`);
+  return new Response(JSON.stringify({ lastIndex: lastIndex !== null ? parseInt(lastIndex, 10) : null }), {
+    headers: jsonHeaders,
+  });
+}
+
+async function handlePutVariation(contactId, request, env) {
+  const headers = corsHeaders(env);
+  const jsonHeaders = { ...headers, 'Content-Type': 'application/json' };
+  const { index } = await request.json();
+  await env.TOKENS.put(`variation:${contactId}`, String(index));
+  return new Response(JSON.stringify({ ok: true }), { headers: jsonHeaders });
 }
