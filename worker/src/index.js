@@ -33,10 +33,44 @@ export default {
     if (path === '/gmail/status') return handleGmailStatus(env);
     if (path === '/gmail/draft' && request.method === 'POST') return handleGmailDraft(request, env);
     if (path === '/gmail/recipient' && request.method === 'GET') return handleGmailRecipient(url, env);
+    if (path === '/xero/contact-timezone' && request.method === 'GET') return handleContactTimezone(url, env);
 
     return new Response('Not found', { status: 404 });
   }
 };
+
+const US_STATE_TIMEZONES = {
+  CT: 'America/New_York', DE: 'America/New_York', FL: 'America/New_York',
+  GA: 'America/New_York', IN: 'America/Indiana/Indianapolis', KY: 'America/New_York',
+  MA: 'America/New_York', MD: 'America/New_York', ME: 'America/New_York',
+  MI: 'America/New_York', NC: 'America/New_York', NH: 'America/New_York',
+  NJ: 'America/New_York', NY: 'America/New_York', OH: 'America/New_York',
+  PA: 'America/New_York', RI: 'America/New_York', SC: 'America/New_York',
+  VA: 'America/New_York', VT: 'America/New_York', WV: 'America/New_York',
+  DC: 'America/New_York',
+  AL: 'America/Chicago', AR: 'America/Chicago', IA: 'America/Chicago',
+  IL: 'America/Chicago', KS: 'America/Chicago', LA: 'America/Chicago',
+  MN: 'America/Chicago', MO: 'America/Chicago', MS: 'America/Chicago',
+  ND: 'America/Chicago', NE: 'America/Chicago', OK: 'America/Chicago',
+  SD: 'America/Chicago', TN: 'America/Chicago', TX: 'America/Chicago',
+  WI: 'America/Chicago',
+  AZ: 'America/Phoenix', CO: 'America/Denver', ID: 'America/Boise',
+  MT: 'America/Denver', NM: 'America/Denver', UT: 'America/Denver',
+  WY: 'America/Denver',
+  CA: 'America/Los_Angeles', NV: 'America/Los_Angeles',
+  OR: 'America/Los_Angeles', WA: 'America/Los_Angeles',
+  AK: 'America/Anchorage', HI: 'Pacific/Honolulu',
+};
+
+const TZ_LABELS = {
+  'America/New_York': 'ET', 'America/Chicago': 'CT', 'America/Denver': 'MT',
+  'America/Phoenix': 'MT', 'America/Boise': 'MT',
+  'America/Indiana/Indianapolis': 'ET', 'America/Los_Angeles': 'PT',
+  'America/Anchorage': 'AKT', 'Pacific/Honolulu': 'HT',
+};
+
+const DEFAULT_TIMEZONE = 'America/Chicago';
+const DEFAULT_TZ_LABEL = 'CT';
 
 function corsHeaders(env) {
   return {
@@ -607,4 +641,63 @@ function base64url(str) {
     .replace(/\+/g, '-')
     .replace(/\//g, '_')
     .replace(/=+$/, '');
+}
+
+async function handleContactTimezone(url, env) {
+  const headers = corsHeaders(env);
+  const jsonHeaders = { ...headers, 'Content-Type': 'application/json' };
+
+  const contactId = url.searchParams.get('contactId');
+  if (!contactId) {
+    return new Response(JSON.stringify({ timezone: DEFAULT_TIMEZONE, label: DEFAULT_TZ_LABEL }), {
+      headers: jsonHeaders,
+    });
+  }
+
+  const xeroToken = await getValidToken(env);
+  if (!xeroToken) {
+    return new Response(JSON.stringify({ error: 'xero_auth_required' }), {
+      status: 401, headers: jsonHeaders,
+    });
+  }
+
+  const tenantId = await env.TOKENS.get('tenant_id');
+
+  try {
+    const res = await fetch(`https://api.xero.com/api.xro/2.0/Contacts/${contactId}`, {
+      headers: {
+        'Authorization': `Bearer ${xeroToken}`,
+        'xero-tenant-id': tenantId,
+        'Accept': 'application/json',
+      },
+    });
+
+    if (!res.ok) {
+      return new Response(JSON.stringify({ timezone: DEFAULT_TIMEZONE, label: DEFAULT_TZ_LABEL }), {
+        headers: jsonHeaders,
+      });
+    }
+
+    const data = await res.json();
+    const addresses = data.Contacts?.[0]?.Addresses || [];
+    const addr = addresses.find(a => a.AddressType === 'STREET') || addresses.find(a => a.AddressType === 'POBOX');
+
+    if (addr?.Region) {
+      const state = addr.Region.trim().toUpperCase();
+      const tz = US_STATE_TIMEZONES[state];
+      if (tz) {
+        return new Response(JSON.stringify({ timezone: tz, label: TZ_LABELS[tz] || DEFAULT_TZ_LABEL }), {
+          headers: jsonHeaders,
+        });
+      }
+    }
+
+    return new Response(JSON.stringify({ timezone: DEFAULT_TIMEZONE, label: DEFAULT_TZ_LABEL }), {
+      headers: jsonHeaders,
+    });
+  } catch {
+    return new Response(JSON.stringify({ timezone: DEFAULT_TIMEZONE, label: DEFAULT_TZ_LABEL }), {
+      headers: jsonHeaders,
+    });
+  }
 }
