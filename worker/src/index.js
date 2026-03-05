@@ -32,6 +32,7 @@ export default {
     if (path === '/gmail/auth') return handleGmailAuth(env);
     if (path === '/gmail/status') return handleGmailStatus(env);
     if (path === '/gmail/draft' && request.method === 'POST') return handleGmailDraft(request, env);
+    if (path === '/gmail/recipient' && request.method === 'GET') return handleGmailRecipient(url, env);
 
     return new Response('Not found', { status: 404 });
   }
@@ -473,6 +474,58 @@ async function handleGmailDraft(request, env) {
       status: 500, headers: jsonHeaders,
     });
   }
+}
+
+async function handleGmailRecipient(url, env) {
+  const headers = corsHeaders(env);
+  const jsonHeaders = { ...headers, 'Content-Type': 'application/json' };
+
+  const invoiceId = url.searchParams.get('invoiceId');
+  if (!invoiceId || !/^[a-f0-9-]+$/i.test(invoiceId)) {
+    return new Response(JSON.stringify({ error: 'Invalid or missing invoiceId' }), {
+      status: 400, headers: jsonHeaders,
+    });
+  }
+
+  const gmailToken = await getValidGmailToken(env);
+  if (!gmailToken) {
+    return new Response(JSON.stringify({ error: 'gmail_auth_required' }), {
+      status: 401, headers: jsonHeaders,
+    });
+  }
+
+  const xeroToken = await getValidToken(env);
+  if (!xeroToken) {
+    return new Response(JSON.stringify({ error: 'xero_auth_required' }), {
+      status: 401, headers: jsonHeaders,
+    });
+  }
+
+  const tenantId = await env.TOKENS.get('tenant_id');
+  const invRes = await fetch(`https://api.xero.com/api.xro/2.0/Invoices/${invoiceId}`, {
+    headers: {
+      'Authorization': `Bearer ${xeroToken}`,
+      'xero-tenant-id': tenantId,
+      'Accept': 'application/json',
+    },
+  });
+
+  if (!invRes.ok) {
+    return new Response(JSON.stringify({ error: 'invoice_fetch_failed' }), {
+      status: 500, headers: jsonHeaders,
+    });
+  }
+
+  const invData = await invRes.json();
+  const invoice = invData.Invoices?.[0];
+  const contactName = invoice?.Contact?.Name || '';
+  const contactId = invoice?.Contact?.ContactID || '';
+
+  const email = await findLastRecipient(gmailToken, contactName);
+
+  return new Response(JSON.stringify({ email: email || '', contactId, contactName }), {
+    headers: jsonHeaders,
+  });
 }
 
 async function findLastRecipient(gmailToken, hiringEntity) {
