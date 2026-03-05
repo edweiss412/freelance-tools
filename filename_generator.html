@@ -598,12 +598,12 @@
 
             <form onsubmit="generateFilename(event)" id="mainForm">
                 <div class="field">
-                    <label for="eventName">Invoice</label>
+                    <label for="eventName">Booking</label>
                     <select id="eventName" name="eventName">
-                        <option value="">Select an event</option>
+                        <option value="">Select a booking</option>
                     </select>
-                    <div class="or-divider">or type manually</div>
-                    <input type="text" id="manualEventName" name="manualEventName" placeholder="Enter event name...">
+                    <div class="or-divider">or enter details manually</div>
+                    <input type="text" id="manualEventName" name="manualEventName" placeholder="Enter booking name...">
                 </div>
 
                 <div class="field">
@@ -808,7 +808,7 @@
 
           const defaultOpt = document.createElement('option');
           defaultOpt.value = '';
-          defaultOpt.textContent = 'Select an invoice';
+          defaultOpt.textContent = 'Select a booking';
           dropdown.appendChild(defaultOpt);
 
           const groups = {
