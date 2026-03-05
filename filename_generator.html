@@ -2298,7 +2298,13 @@
                 if (!res.ok) throw new Error(`Draft creation failed: ${res.status}`);
 
                 const data = await res.json();
-                window.open(data.draftUrl, '_blank');
+                const isMobile = /Android|iPhone|iPad/i.test(navigator.userAgent);
+                if (isMobile && data.messageId) {
+                    // Android intent URI opens the draft directly in the Gmail app
+                    window.location.href = `intent://mail/u/0/#drafts/${data.messageId}#Intent;scheme=https;package=com.google.android.gm;S.browser_fallback_url=${encodeURIComponent(data.draftUrl)};end`;
+                } else {
+                    window.open(data.draftUrl, '_blank');
+                }
                 showToast('Draft created — opened in Gmail');
             } catch (err) {
                 console.error('Draft creation failed:', err);

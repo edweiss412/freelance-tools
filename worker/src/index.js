@@ -463,6 +463,7 @@ async function handleGmailDraft(request, env) {
     const draft = await draftRes.json();
     return new Response(JSON.stringify({
       draftId: draft.id,
+      messageId: draft.message.id,
       draftUrl: `https://mail.google.com/mail/u/0/#drafts/${draft.message.id}`,
     }), {
       headers: jsonHeaders,
